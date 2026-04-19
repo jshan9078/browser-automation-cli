@@ -6,21 +6,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/pyproject.toml" ]]; then
   DEFAULT_PACKAGE_SPEC="$SCRIPT_DIR"
 else
-  DEFAULT_PACKAGE_SPEC="browser-cli"
+  DEFAULT_PACKAGE_SPEC="browser-automation-cli"
 fi
 
 PACKAGE_SPEC="${1:-$DEFAULT_PACKAGE_SPEC}"
 
-echo "Installing Browser CLI with pipx..."
+echo "Installing Browser CLI with uv..."
 
-if ! command -v pipx >/dev/null 2>&1; then
-  echo "pipx not found. Installing pipx..."
-  python3 -m pip install --user pipx
-  python3 -m pipx ensurepath
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv not found. Installing uv..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-python3 -m pipx install --force "$PACKAGE_SPEC"
+uv tool install --force "$PACKAGE_SPEC"
 
 echo "Installing Chromium runtime..."
 browser install

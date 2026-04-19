@@ -1,8 +1,8 @@
 # Browser CLI
 
-> **If you are an LLM, see [AGENTS.md](./AGENTS.md) for quick setup and usage instructions.**
+> **If you are an LLM, see [AGENTS.md](https://github.com/jshan9078/browser-automation-cli/blob/main/AGENTS.md) for quick setup and usage instructions.**
 
-A lightweight, self-hosted browser automation tool with a background daemon and CLI client. Enables authenticated web automation, screenshots, DOM snapshots, and page interactions via simple CLI commands. Share a `SKILL.md` file with your coding agent harness for seamless integration.
+A lightweight, self-hosted browser automation tool with a background daemon and CLI client. Enables authenticated web automation, screenshots, DOM snapshots, and page interactions via simple CLI commands. Share the [`SKILL.md`](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md) file with your coding agent harness for seamless integration.
 
 ## Why This Exists
 
@@ -18,7 +18,7 @@ Browser CLI solves this with a persistent daemon that any agent can call via sub
 ## Install
 
 ```bash
-pipx install browser-cli
+uv tool install browser-automation-cli
 browser install
 ```
 
@@ -187,9 +187,9 @@ All commands return JSON. Check `success` field first.
 
 ## Using with Coding Agents
 
-Share the `SKILL.md` file with your coding agent harness. It contains agent-specific instructions, workflow patterns, and decision guides for when to use standalone vs daemon commands.
+Share the [`SKILL.md`](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md) file with your coding agent harness. It contains agent-specific instructions, workflow patterns, and decision guides for when to use standalone vs daemon commands.
 
-See [AGENTS.md](./AGENTS.md) for complete agent integration guide.
+See [AGENTS.md](https://github.com/jshan9078/browser-automation-cli/blob/main/AGENTS.md) for complete agent integration guide.
 
 ## Troubleshooting
 

@@ -13,7 +13,7 @@ Any coding agent can use it via subprocess calls. No SDK required.
 ## Install
 
 ```bash
-pipx install browser-cli
+uv tool install browser-automation-cli
 browser install
 ```
 

@@ -1,7 +1,7 @@
 [project]
 name = "browser-automation-cli"
-version = "0.1.0"
-description = "Lightweight browser automation daemon with CLI"
+version = "0.2.0"
+description = "Browser automation daemon + CLI for coding agents. Persistent sessions, no MCP, no extensions."
 requires-python = ">=3.10"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
@@ -14,8 +14,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/<your-org>/<your-repo>"
-Repository = "https://github.com/<your-org>/<your-repo>"
+Homepage = "https://github.com/jshan9078/browser-automation-cli"
+Repository = "https://github.com/jshan9078/browser-automation-cli"
 
 [project.scripts]
 browser-daemon = "daemon.server:main"
@@ -27,6 +27,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["daemon", "cli"]
-
-[tool.rye]
-dev-dependencies = []

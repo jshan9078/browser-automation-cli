@@ -75,7 +75,7 @@ Before using daemon commands, ensure the environment is ready:
 
 1. Install (one-time):
 ```bash
-pipx install browser-cli
+uv tool install browser-automation-cli
 browser install
 ```
 
