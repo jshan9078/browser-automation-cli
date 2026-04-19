@@ -6,11 +6,12 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 SOCKET_PATH = Path.home() / ".browser-daemon" / "socket"
 
 
-async def cmd_capture(url: str, full_page: bool = True, output: str | None = None):
+async def cmd_capture(url: str, full_page: bool = True, output: Optional[str] = None):
     """Standalone screenshot capture without daemon. Saves to /tmp."""
     from playwright.async_api import async_playwright
     import time
@@ -143,7 +144,7 @@ async def cmd_navigate(session_id: str, url: str):
     print_json(result)
 
 
-async def cmd_snapshot(session_id: str, selector: str | None):
+async def cmd_snapshot(session_id: str, selector: Optional[str]):
     params = {"selector": selector} if selector else {}
     result = await send_request({"action": "snapshot", "session_id": session_id, "params": params})
     print_json(result)
@@ -174,7 +175,7 @@ async def cmd_press_key(session_id: str, key: str):
     print_json(result)
 
 
-async def cmd_screenshot(session_id: str, selector: str | None, output: str | None = None):
+async def cmd_screenshot(session_id: str, selector: Optional[str], output: Optional[str] = None):
     params = {}
     if selector:
         params["selector"] = selector

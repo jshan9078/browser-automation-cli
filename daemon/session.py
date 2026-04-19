@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from playwright.async_api import Browser, BrowserContext, Page
 
@@ -59,7 +59,7 @@ class SessionManager:
             logger.info(f"Created session {session_id}")
             return session
 
-    async def get(self, session_id: str) -> Session | None:
+    async def get(self, session_id: str) -> Optional[Session]:
         async with self._lock:
             return self._sessions.get(session_id)
 

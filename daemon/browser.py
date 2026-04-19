@@ -1,6 +1,6 @@
 import base64
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from playwright.async_api import Page
 
@@ -22,7 +22,7 @@ async def navigate(page: Page, url: str) -> dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-async def snapshot(page: Page, selector: str | None = None) -> dict[str, Any]:
+async def snapshot(page: Page, selector: Optional[str] = None) -> dict[str, Any]:
     logger.debug(f"Taking snapshot (selector={selector})")
     try:
         # Use page.evaluate to get element data and page state
@@ -158,7 +158,7 @@ async def press_key(page: Page, key: str) -> dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-async def screenshot(page: Page, selector: str | None = None, output: str | None = None) -> dict[str, Any]:
+async def screenshot(page: Page, selector: Optional[str] = None, output: Optional[str] = None) -> dict[str, Any]:
     logger.debug(f"Taking screenshot (selector={selector})")
     try:
         from pathlib import Path

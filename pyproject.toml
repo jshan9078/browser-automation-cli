@@ -1,8 +1,8 @@
 [project]
 name = "browser-automation-cli"
-version = "0.2.0"
+version = "0.2.1"
 description = "Browser automation daemon + CLI for coding agents. Persistent sessions, no MCP, no extensions."
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
 authors = [
