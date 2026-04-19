@@ -1,155 +1,232 @@
-# Agent Setup Guide
+# Agent Integration Guide
 
-> **For agent integration, see [SKILL.md](./SKILL.md) for usage patterns. Add the SKILL.md to your local setup as part of your skills configuration.**
+> **Give [SKILL.md](./SKILL.md) to your coding agent harness as a skill file. It contains ready-to-use workflows and decision guides for this tool.**
 
-This document explains how to set up Browser CLI for users and integrate it into your agent workflow.
+## What This Tool Does
 
-## Setup (One-time)
+Browser CLI provides authenticated browser automation via a CLI. It consists of:
+- **`browser-daemon`** — background process managing persistent browser sessions via Unix socket
+- **`browser`** — CLI client that sends commands to the daemon, or runs standalone captures
 
-Preferred setup (published package):
+Any coding agent can use it via subprocess calls. No SDK required.
+
+## Install
 
 ```bash
 pipx install browser-cli
-
-# If "command not found" after install:
-# export PATH="$HOME/.local/bin:$PATH"
-
 browser install
 ```
 
-If package is not published yet (install from Git):
-
+If `browser` or `browser-daemon` is not found:
 ```bash
-pipx install "git+https://github.com/<your-org>/<your-repo>.git"
-browser install
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-From local checkout (developer path):
+## Quick Start
 
-```bash
-bash ./setup.sh
-```
-
-## Starting the Daemon
-
-The daemon must be running before any browser actions work. Start it with:
-
+### 1. Start daemon (must stay running)
 ```bash
 browser-daemon
 ```
+A visible browser window opens. The daemon must remain running for all session commands.
 
-**Important:** The daemon opens a visible browser window. It must remain running.
+### 2. Create session
+```bash
+browser create
+```
+Returns an 8-character hex session ID (e.g., `abc12345`). A fresh browser window opens — the user logs in manually.
 
-## Session Lifecycle
+### 3. Use the session
+```bash
+browser abc12345 navigate https://github.com
+browser abc12345 snapshot
+browser abc12345 click "a.header-link"
+browser abc12345 screenshot
+```
 
-1. **Create session** - User manually logs into sites:
-   ```bash
-   browser create
-   ```
+## Session Model
 
-2. **Use session** - Agent performs actions:
-   ```bash
-   browser <session_id> navigate github.com/user/repo
-   browser <session_id> snapshot
-   ```
+| Property | Detail |
+|----------|--------|
+| **ID format** | 8-char hex string (e.g., `a1b2c3d4`) |
+| **Scope** | One session = one isolated browser context with its own cookies/auth |
+| **Persistence** | Sessions live until explicitly deleted or daemon stops |
+| **Sharing** | Multiple agents/calls can use the same session ID |
+| **Parallelism** | Multiple sessions can run simultaneously |
+| **Viewport** | 1920x1080 desktop (anti-detection: hides `navigator.webdriver`, sets desktop Chrome UA) |
 
-3. **Share session** - Multiple agents can use the same session ID
+## Command Reference
 
-4. **Delete when done**:
-   ```bash
-   browser delete <session_id>
-   ```
-
-## Agent Workflow Example
+### Standalone (no daemon, no session)
 
 ```bash
-# 1. Create session, user logs in manually
+browser capture <url> [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-f, --full-page` | Full scrollable page (default: viewport only) |
+| `-o, --output <path>` | Custom output path (default: `/tmp/browser_capture_<timestamp>.jpg`) |
+
+**Output:** `{"success": true, "path": "/tmp/...", "format": "jpeg"}`
+
+### Daemon Commands
+
+| Command | Description | Output |
+|---------|-------------|--------|
+| `browser install` | Install Chromium runtime | — |
+| `browser cleanup` | Kill stale Chrome processes | — |
+| `browser create` | Create session, opens browser | Session ID |
+| `browser list` | List active sessions | Table of sessions |
+| `browser <id> navigate <url>` | Navigate to URL | `{success, url, title}` |
+| `browser <id> snapshot [selector]` | Get elements with CSS selectors | `{success, elements[], scrollY, viewportHeight, documentHeight}` |
+| `browser <id> click <selector>` | Click element | `{success, url, title}` |
+| `browser <id> type <selector> <text>` | Fill input | `{success}` |
+| `browser <id> hover <selector>` | Hover element | `{success}` |
+| `browser <id> select <selector> <value>` | Select dropdown option | `{success}` |
+| `browser <id> press <key>` | Press keyboard key (e.g., `Enter`, `Tab`) | `{success}` |
+| `browser <id> screenshot [selector] [-o <path>]` | Screenshot page or element | `{success, path, format}` |
+| `browser <id> back` | Go back | `{success, url, title}` |
+| `browser <id> forward` | Go forward | `{success, url, title}` |
+| `browser <id> delete` | Delete session | — |
+| `browser delete <id>` | Delete session (alternate syntax) | — |
+
+## Agent Workflow
+
+Follow this sequence for reliable execution:
+
+### Step 1: Check for existing sessions
+```bash
+browser list
+```
+Reuse an existing session if available. Only create a new one if needed.
+
+### Step 2: Create session (if none exists)
+```bash
 browser create
-# → returns session_id like "abc12345"
+```
+Wait for the user to complete manual login. The session ID is printed to stdout.
 
-# 2. Navigate and inspect
-browser abc12345 navigate github.com/user/repo
-browser abc12345 snapshot
-# → returns elements array
+### Step 3: Navigate and inspect
+```bash
+browser <id> navigate <url>
+browser <id> snapshot
+```
+Parse the snapshot JSON to discover elements, their CSS selectors, text content, and whether they are interactive.
 
-# 3. Interact
-browser abc12345 click "button.submit"
-browser abc12345 type "input[name=message]" "Hello"
-browser abc12345 screenshot
-
-# 4. Agent parses JSON output to decide next steps
+### Step 4: Interact
+Use selectors from the snapshot output:
+```bash
+browser <id> click "button[type=submit]"
+browser <id> type "input[name=email]" "user@example.com"
+browser <id> press "Enter"
 ```
 
-## Output Format
+### Step 5: Verify
+```bash
+browser <id> screenshot
+browser <id> snapshot
+```
+Confirm the action succeeded by checking the new page state.
 
-All actions return JSON:
+## Output Parsing
+
+**Every command returns JSON on stdout.** Always parse and check `success` before proceeding.
+
+### Navigate / Click / Back / Forward
+```json
+{"success": true, "url": "https://...", "title": "..."}
+```
+
+### Snapshot
 ```json
 {
   "success": true,
-  "url": "https://github.com/user/repo",
-  "title": "Repository"
-}
-```
-
-For `snapshot`:
-```json
-{
-  "success": true,
+  "url": "https://...",
+  "title": "...",
+  "scrollY": 0,
+  "viewportHeight": 1080,
+  "documentHeight": 2400,
   "elements": [
-    {"ref": "el_0", "tag": "a", "text": "README", "href": "..."},
-    {"ref": "el_1", "tag": "button", "text": "Submit", "name": null}
+    {
+      "ref": "el_0",
+      "tag": "button",
+      "selector": "button.submit-btn",
+      "text": "Submit",
+      "interactive": true,
+      "href": null,
+      "name": null,
+      "placeholder": null,
+      "ariaLabel": null
+    }
   ]
 }
 ```
 
-For `screenshot`:
+### Screenshot
 ```json
-{
-  "success": true,
-  "image": "base64encodedstring..."
-}
+{"success": true, "path": "/tmp/browser_screenshot_1234567890.jpg", "format": "jpeg"}
 ```
 
-## Shell Integration
+### Error
+```json
+{"success": false, "error": "Session abc12345 not found"}
+```
 
-Agents can call the CLI via subprocess. Example patterns:
+## Calling from Code
 
+### Python
 ```python
-import subprocess
-import json
+import subprocess, json
 
-result = subprocess.run(
-    ["browser", "abc12345", "snapshot"],
-    capture_output=True,
-    text=True
-)
+result = subprocess.run(["browser", "abc12345", "snapshot"], capture_output=True, text=True)
 data = json.loads(result.stdout)
+if data["success"]:
+    elements = data["elements"]
 ```
 
+### TypeScript / Node.js
 ```typescript
 import { execSync } from 'child_process';
 
-const output = execSync(`browser abc12345 snapshot`);
+const output = execSync('browser abc12345 snapshot');
 const data = JSON.parse(output.toString());
+if (data.success) {
+    const elements = data.elements;
+}
 ```
 
-## Sharing Sessions Between Agents
-
-Sessions persist until explicitly deleted. Multiple agents can reference the same session:
-
+### Shell
 ```bash
-# Agent A creates session
-browser create
-# → abc12345
-
-# Agent B uses same session
-browser abc12345 navigate github.com
+response=$(browser abc12345 snapshot)
+echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['success'])"
 ```
 
-## Key Points
+## Selector Guidance
 
-- Daemon runs once, handles multiple sessions
-- User manually authenticates (no credentials in code)
-- Session IDs are 8-character hex strings
-- Browser window stays open for the session duration
-- Actions are blocking (not parallel within a session)
+- **Always run `snapshot` first** to discover available elements and their selectors
+- Prefer stable selectors: `id`, `name`, `data-testid`, role-oriented classes
+- Quote selectors with special characters: `"input[name='user[email]']"`
+- Use `:has-text()` for text-based matching: `"a:has-text('Sign In')"`
+- The snapshot output provides a `selector` field for each element — use it directly
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `Daemon not running` | Start `browser-daemon` |
+| `Session not found` | Run `browser list` to find valid IDs |
+| `Element not found` | Run `browser <id> snapshot` to get current selectors |
+| `Command not found` | `export PATH="$HOME/.local/bin:$PATH"` |
+| Browser doesn't open | Run `browser install` |
+| Stale Chrome processes | Run `browser cleanup` |
+| Connection refused | Kill existing daemon, restart `browser-daemon` |
+
+## Key Rules for Agents
+
+1. **Never request credentials** — user authenticates manually in the browser UI
+2. **Always check `success`** in JSON output before proceeding
+3. **Reuse session IDs** when possible to preserve auth state
+4. **Run `snapshot` before `click`/`type`** to discover current page elements
+5. **Delete sessions** when no longer needed
+6. **The daemon must stay running** — do not kill it between actions

@@ -71,22 +71,17 @@ browser capture http://localhost:3000
 
 ## Setup Checklist
 
-Before using commands, ensure the environment is ready:
+Before using daemon commands, ensure the environment is ready:
 
-1. Install dependencies (one-time):
+1. Install (one-time):
 ```bash
 pipx install browser-cli
-
-# If commands not found, add to PATH:
-# export PATH="$HOME/.local/bin:$PATH"
-
 browser install
 ```
 
-If not published yet:
+If commands are not found:
 ```bash
-pipx install "git+https://github.com/<your-org>/<your-repo>.git"
-browser install
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 2. Start daemon (must remain running):
@@ -104,44 +99,43 @@ browser create
 ## Session Model
 
 - A session is one persistent browser context with cookies/auth state.
+- Session IDs are 8-character hex strings (e.g., `a1b2c3d4`).
 - One session can visit multiple different sites (including localhost URLs).
 - Multiple agents can share the same session ID.
 - Multiple sessions can run at once for different accounts/workflows.
+- Sessions persist until explicitly deleted or the daemon stops.
+- Viewport is forced to 1920x1080 desktop. `navigator.webdriver` is hidden.
 
-## Command Usage
+## Command Reference
 
-Standalone command (no daemon, no session, headless):
+### Standalone (no daemon, no session)
 
 ```bash
-# Viewport screenshot (fastest, default)
-browser capture <url>
-
-# Full page screenshot
-browser capture <url> -f
-
-# Custom output path
-browser capture <url> -o ./screenshot.jpg
-
-# Combined
-browser capture <url> -f -o ./full-page.jpg
+browser capture <url> [-f] [-o <path>]
 ```
 
-Daemon commands (requires session, interactive browser):
+### Daemon Commands
 
 ```bash
-browser create
-browser list
-browser <session_id> navigate <url>
-browser <session_id> snapshot [selector]
-browser <session_id> click <selector>
-browser <session_id> type <selector> <text>
-browser <session_id> hover <selector>
-browser <session_id> select <selector> <value>
-browser <session_id> press <key>
-browser <session_id> screenshot [selector]
-browser <session_id> back
-browser <session_id> forward
-browser delete <session_id>
+# Session management
+browser install                       # Install Chromium runtime
+browser cleanup                       # Kill stale Chrome processes
+browser create                        # Create session (opens browser for login)
+browser list                          # List active sessions
+browser delete <session_id>           # Delete session
+
+# Page actions (require session_id)
+browser <id> navigate <url>           # Navigate to URL
+browser <id> snapshot [selector]      # Get page elements with CSS selectors
+browser <id> click <selector>         # Click element
+browser <id> type <selector> <text>   # Type text into input
+browser <id> hover <selector>         # Hover element
+browser <id> select <selector> <val>  # Select dropdown option
+browser <id> press <key>              # Press keyboard key (Enter, Tab, etc.)
+browser <id> screenshot [sel] [-o p]  # Screenshot page or element
+browser <id> back                     # Go back
+browser <id> forward                  # Go forward
+browser <id> delete                   # Delete session
 ```
 
 ## Agent Workflow
@@ -180,7 +174,7 @@ browser <id> snapshot
 
 Commands return JSON. Always check `success` first.
 
-Example action response:
+### Navigate / Click / Back / Forward
 ```json
 {
   "success": true,
@@ -189,31 +183,94 @@ Example action response:
 }
 ```
 
-Example snapshot response:
+### Snapshot
 ```json
 {
   "success": true,
+  "url": "http://localhost:3000",
+  "title": "App",
+  "scrollY": 0,
+  "viewportHeight": 1080,
+  "documentHeight": 2400,
   "elements": [
-    {"ref": "el_0", "tag": "button", "text": "Save"},
-    {"ref": "el_1", "tag": "input", "name": "email", "placeholder": "you@example.com"}
+    {
+      "ref": "el_0",
+      "tag": "button",
+      "selector": "button.submit-btn",
+      "text": "Save",
+      "interactive": true,
+      "href": null,
+      "name": null,
+      "placeholder": null,
+      "ariaLabel": null
+    },
+    {
+      "ref": "el_1",
+      "tag": "input",
+      "selector": "input[name=email]",
+      "text": null,
+      "interactive": true,
+      "href": null,
+      "name": "email",
+      "placeholder": "you@example.com",
+      "ariaLabel": null
+    }
   ]
+}
+```
+
+### Screenshot
+```json
+{
+  "success": true,
+  "path": "/tmp/browser_screenshot_1234567890.jpg",
+  "format": "jpeg"
+}
+```
+
+### Error
+```json
+{
+  "success": false,
+  "error": "Session abc12345 not found"
 }
 ```
 
 ## Selector Guidance
 
-- Prefer stable CSS selectors (`name`, `data-*`, role-oriented classes).
-- Use `snapshot` first to discover elements before clicking/typing.
+- **Always run `snapshot` first** to discover elements and their selectors.
+- Prefer stable CSS selectors (`id`, `name`, `data-*`, role-oriented classes).
+- Use `snapshot` output `selector` field directly — it is pre-built for each element.
 - Quote selectors containing special characters.
+- Text-based matching: `"a:has-text('Sign In')"`
+
+## Shell Integration
+
+Agents can call the CLI via subprocess:
+
+```python
+import subprocess, json
+result = subprocess.run(["browser", "abc12345", "snapshot"], capture_output=True, text=True)
+data = json.loads(result.stdout)
+```
+
+```typescript
+import { execSync } from 'child_process';
+const data = JSON.parse(execSync('browser abc12345 snapshot').toString());
+```
 
 ## Operational Rules
 
 - Do not request credentials; user authenticates manually in browser UI.
 - Reuse session IDs when possible to preserve auth and reduce friction.
 - Delete sessions when no longer needed to keep state clean.
+- The daemon must remain running between actions.
+- Always check `success` in JSON output before proceeding to the next step.
 
 ## Quick Troubleshooting
 
 - `Daemon not running` -> start `browser-daemon`.
 - `Session not found` -> run `browser list` and use a valid ID.
 - `Element not found` -> run `browser <id> snapshot` and update selector.
+- `Command not found` -> `export PATH="$HOME/.local/bin:$PATH"`.
+- Stale Chrome processes -> run `browser cleanup`.
