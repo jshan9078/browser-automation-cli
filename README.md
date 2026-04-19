@@ -4,6 +4,17 @@
 
 A lightweight, self-hosted browser automation tool with a background daemon and CLI client. Enables authenticated web automation, screenshots, DOM snapshots, and page interactions via simple CLI commands. Share a `SKILL.md` file with your coding agent harness for seamless integration.
 
+## Why This Exists
+
+Coding agents need to interact with authenticated web apps. Existing solutions all have tradeoffs:
+
+- **Chrome DevTools MCP** — requires Node.js, per-agent MCP server configuration, Google telemetry by default, and complex setup for each coding agent
+- **BrowserMCP and similar tools** — require installing Chrome extensions, tie into specific ecosystems, and use MCP which bloats the agent's context window with tool definitions and protocol overhead
+- **Playwright/Puppeteer scripts** — require writing code for every interaction, no persistent auth state
+- **AI browser frameworks** — heavy, opinionated, and framework-locked
+
+Browser CLI solves this with a persistent daemon that any agent can call via subprocess. No extensions, no MCP config, no SDKs, no ecosystem lock-in. Sessions persist across agent calls so you only log in once.
+
 ## Install
 
 ```bash
