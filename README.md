@@ -1,6 +1,6 @@
-# Browser CLI
+# Browser Automation CLI
 
-> **If you are an LLM, see [AGENTS.md](https://github.com/jshan9078/browser-automation-cli/blob/main/AGENTS.md) for quick setup and usage instructions.**
+> **If you are an LLM, see** **[AGENTS.md](https://github.com/jshan9078/browser-automation-cli/blob/main/AGENTS.md)** **for quick setup and usage instructions.**
 
 A lightweight, self-hosted browser automation tool with a background daemon and CLI client. Enables authenticated web automation, screenshots, DOM snapshots, and page interactions via simple CLI commands. Share the [`SKILL.md`](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md) file with your coding agent harness for seamless integration.
 
@@ -8,10 +8,13 @@ A lightweight, self-hosted browser automation tool with a background daemon and 
 
 Coding agents need to interact with authenticated web apps. Existing solutions all have tradeoffs:
 
-- **Chrome DevTools MCP** — requires Node.js, per-agent MCP server configuration, Google telemetry by default, and complex setup for each coding agent
-- **BrowserMCP and similar tools** — require installing Chrome extensions, tie into specific ecosystems, and use MCP which bloats the agent's context window with tool definitions and protocol overhead
-- **Playwright/Puppeteer scripts** — require writing code for every interaction, no persistent auth state
-- **AI browser frameworks** — heavy, opinionated, and framework-locked
+* **Chrome DevTools MCP** — requires Node.js, per-agent MCP server configuration, Google telemetry by default, and complex setup for each coding agent
+
+* **BrowserMCP and similar tools** — require installing Chrome extensions, tie into specific ecosystems, and use MCP which bloats the agent's context window with tool definitions and protocol overhead
+
+* **Playwright/Puppeteer scripts** — require writing code for every interaction, no persistent auth state
+
+* **AI browser frameworks** — heavy, opinionated, and framework-locked
 
 Browser CLI solves this with a persistent daemon that any agent can call via subprocess. No extensions, no MCP config, no SDKs, no ecosystem lock-in. Sessions persist across agent calls so you only log in once.
 
@@ -76,7 +79,7 @@ browser delete <id>   # Delete a session
 
 Press `Ctrl+C` in the terminal running `browser-daemon`.
 
----
+***
 
 ## Commands Reference
 
@@ -89,12 +92,14 @@ browser capture <url> [options]
 ```
 
 **Options:**
-| Flag | Description |
-|------|-------------|
-| `-f, --full-page` | Capture full scrollable page (default: viewport only) |
-| `-o, --output <path>` | Custom output path |
+
+| Flag                  | Description                                           |
+| :-------------------- | :---------------------------------------------------- |
+| `-f, --full-page`     | Capture full scrollable page (default: viewport only) |
+| `-o, --output <path>` | Custom output path                                    |
 
 **Examples:**
+
 ```bash
 browser capture https://example.com
 browser capture https://example.com -f
@@ -106,43 +111,48 @@ browser capture http://localhost:3000
 
 Requires `browser-daemon` running and an active session.
 
-| Command | Description |
-|---------|-------------|
-| `browser install` | Install Chromium runtime |
-| `browser cleanup` | Kill stale Chrome processes |
-| `browser create` | Create new session (opens browser for login) |
-| `browser list` | List active sessions |
-| `browser <id> navigate <url>` | Navigate to URL |
-| `browser <id> snapshot [selector]` | Get page elements with CSS selectors |
-| `browser <id> click <selector>` | Click element |
-| `browser <id> type <selector> <text>` | Type text into input |
-| `browser <id> hover <selector>` | Hover element |
-| `browser <id> select <selector> <value>` | Select dropdown option |
-| `browser <id> press <key>` | Press keyboard key |
-| `browser <id> screenshot [selector] [-o <path>]` | Take screenshot (full page or element) |
-| `browser <id> back` | Go back |
-| `browser <id> forward` | Go forward |
-| `browser <id> delete` | Delete session |
+| Command                                          | Description                                  |
+| :----------------------------------------------- | :------------------------------------------- |
+| `browser install`                                | Install Chromium runtime                     |
+| `browser cleanup`                                | Kill stale Chrome processes                  |
+| `browser create`                                 | Create new session (opens browser for login) |
+| `browser list`                                   | List active sessions                         |
+| `browser <id> navigate <url>`                    | Navigate to URL                              |
+| `browser <id> snapshot [selector]`               | Get page elements with CSS selectors         |
+| `browser <id> click <selector>`                  | Click element                                |
+| `browser <id> type <selector> <text>`            | Type text into input                         |
+| `browser <id> hover <selector>`                  | Hover element                                |
+| `browser <id> select <selector> <value>`         | Select dropdown option                       |
+| `browser <id> press <key>`                       | Press keyboard key                           |
+| `browser <id> screenshot [selector] [-o <path>]` | Take screenshot (full page or element)       |
+| `browser <id> back`                              | Go back                                      |
+| `browser <id> forward`                           | Go forward                                   |
+| `browser <id> delete`                            | Delete session                               |
 
----
+***
 
 ## Architecture
 
-- **Daemon** (`browser-daemon`): Unix socket server managing persistent Playwright browser contexts. Each session is an isolated browser context with cookies/auth state.
-- **CLI** (`browser`): Sends commands to the daemon via Unix socket, or runs standalone capture directly via Playwright.
-- **Session model**: One session = one authenticated browser context. Sessions persist until deleted. Multiple sessions can run in parallel. Multiple agents can share the same session ID.
+* **Daemon** (`browser-daemon`): Unix socket server managing persistent Playwright browser contexts. Each session is an isolated browser context with cookies/auth state.
+
+* **CLI** (`browser`): Sends commands to the daemon via Unix socket, or runs standalone capture directly via Playwright.
+
+* **Session model**: One session = one authenticated browser context. Sessions persist until deleted. Multiple sessions can run in parallel. Multiple agents can share the same session ID.
 
 ## Anti-Detection
 
-- `navigator.webdriver` hidden via `add_init_script`
-- Explicit desktop Chrome user agent
-- 1920x1080 viewport to avoid mobile layouts
+* `navigator.webdriver` hidden via `add_init_script`
+
+* Explicit desktop Chrome user agent
+
+* 1920x1080 viewport to avoid mobile layouts
 
 ## Output Format
 
 All commands return JSON. Check `success` field first.
 
 **Action response:**
+
 ```json
 {
   "success": true,
@@ -152,6 +162,7 @@ All commands return JSON. Check `success` field first.
 ```
 
 **Snapshot response:**
+
 ```json
 {
   "success": true,
@@ -175,6 +186,7 @@ All commands return JSON. Check `success` field first.
 ```
 
 **Screenshot response:**
+
 ```json
 {
   "success": true,
@@ -183,7 +195,7 @@ All commands return JSON. Check `success` field first.
 }
 ```
 
----
+***
 
 ## Using with Coding Agents
 
@@ -223,3 +235,4 @@ browser list
 ```bash
 browser cleanup
 ```
+
