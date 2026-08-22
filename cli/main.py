@@ -11,7 +11,7 @@ from typing import Optional
 SOCKET_PATH = Path.home() / ".browser-daemon" / "socket"
 
 
-async def cmd_capture(url: str, full_page: bool = True, output: Optional[str] = None):
+async def cmd_capture(url: str, full_page: bool = False, output: Optional[str] = None):
     """Standalone screenshot capture without daemon. Saves to /tmp."""
     from playwright.async_api import async_playwright
     import time
@@ -279,7 +279,7 @@ async def _main(args: list[str]):
 
     if cmd == "capture" and len(args) >= 2:
         url = args[1]
-        full_page = True  # Default to full page for better results
+        full_page = False  # viewport only unless -f/--full-page (matches --help and README)
         output = None
         
         # Parse flags
