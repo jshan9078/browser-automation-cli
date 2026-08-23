@@ -48,7 +48,7 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, target: x86_64, manylinux: auto }
-          - { os: ubuntu-latest, target: aarch64, manylinux: auto }
+          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: auto }  # native: ring/rustls does not cross-compile in the cross-gcc image
           - { os: macos-14, target: aarch64 }
           - { os: macos-15-intel, target: x86_64 }
     runs-on: ${{ matrix.os }}
@@ -60,8 +60,7 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux || '' }}
           args: --release --out dist
-      - name: Smoke the client binary (native builds only)
-        if: (matrix.os != 'ubuntu-latest' || matrix.target == 'x86_64')
+      - name: Smoke the client binary (every matrix entry builds natively)
         run: |
           set -e
           pip install rust/dist/*.whl
@@ -99,7 +98,7 @@ jobs:
           set -e
           V="${GITHUB_REF_NAME#v}"
           for w in dist/*.whl; do
-            case "$w" in *linux*x86_64*|*manylinux*x86_64*) t="linux-x86_64" ;; *linux*aarch64*|*manylinux*aarch64*) t="linux-aarch64" ;; *macosx*arm64*) t="darwin-arm64" ;; *macosx*x86_64*) t="darwin-x86_64" ;; *) continue ;; esac
+            case "$w" in *linux*x86_64*) t="linux-x86_64" ;; *linux*aarch64*) t="linux-aarch64" ;; *macosx*arm64*) t="darwin-arm64" ;; *macosx*x86_64*) t="darwin-x86_64" ;; *) continue ;; esac
             rm -rf tmpw && mkdir tmpw && unzip -q "$w" -d tmpw
             bin=$(find tmpw -type d -name scripts | head -1)
             chmod +x "$bin"/browser "$bin"/browser-daemon
