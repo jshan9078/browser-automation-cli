@@ -1,0 +1,31 @@
+{
+  "task": "t4_rename",
+  "run": "sonnet",
+  "success": true,
+  "answer": null,
+  "wall_s": 20.25,
+  "wall_total_s": 43.1,
+  "cli_calls": 12,
+  "failed_calls": 2,
+  "cli_time_s": 1.34,
+  "tool_output_tokens": 1150,
+  "snapshots": 6,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.6,
+  "daemon_rss_mb": 444,
+  "agent_tokens": 45209,
+  "commands": [
+    "navigate http://127.0.0.1:8790/",
+    "snapshot",
+    "fill @e1 ops-admin",
+    "fill @e2 correct-horse",
+    "click @e3 -s",
+    "type @e1 ops-admin",
+    "type @e2 correct-horse",
+    "click @e3 -s",
+    "click @e6 -s",
+    "click @e30 -s",
+    "type @e48 Atlas v2",
+    "click @e49 -s"
+  ]
+}

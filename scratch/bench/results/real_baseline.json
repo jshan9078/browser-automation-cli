@@ -1,0 +1,26 @@
+{
+  "https://dash.cloudflare.com/login": {
+    "s": 0.08182804100215435,
+    "tokens": 6696,
+    "lines": 1110,
+    "mentions_login_or_content": true
+  },
+  "https://github.com/login": {
+    "s": 0.09182816697284579,
+    "tokens": 5751,
+    "lines": 934,
+    "mentions_login_or_content": true
+  },
+  "https://news.ycombinator.com": {
+    "s": 0.07779820903670043,
+    "tokens": 7000,
+    "lines": 1110,
+    "mentions_login_or_content": true
+  },
+  "https://en.wikipedia.org/wiki/Playwright_(software)": {
+    "s": 0.07982020801864564,
+    "tokens": 6367,
+    "lines": 1110,
+    "mentions_login_or_content": true
+  }
+}

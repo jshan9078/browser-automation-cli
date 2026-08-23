@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+"""browser — thin client for browser-daemon. Stays free of Playwright imports on the daemon path (~40ms per call)."""
 import asyncio
-import base64
 import json
-import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,87 +10,60 @@ from typing import Optional
 
 SOCKET_PATH = Path.home() / ".browser-daemon" / "socket"
 
+HELP = """browser — authenticated browser automation for coding agents
 
-async def cmd_capture(url: str, full_page: bool = False, output: Optional[str] = None):
-    """Standalone screenshot capture without daemon. Saves to /tmp."""
-    from playwright.async_api import async_playwright
-    import time
-    
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        
-        # Create context with anti-detection measures
-        context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-        )
-        
-        # Hide navigator.webdriver to avoid automation detection
-        await context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-                configurable: true
-            });
-        """)
-        
-        page = await context.new_page()
-        
-        try:
-            await page.goto(url, wait_until="networkidle", timeout=30000)
-            
-            # Wait for body to be fully loaded/rendered
-            await page.wait_for_selector("body", state="attached")
-            await page.wait_for_load_state("domcontentloaded")
-            await asyncio.sleep(2)  # Additional wait for JS frameworks
-            
-            # Take screenshot - JPEG for smaller file size
-            screenshot_bytes = await page.screenshot(
-                full_page=full_page,
-                type="jpeg",
-                quality=85
-            )
-            
-            # Determine output path
-            timestamp = int(time.time())
-            if output:
-                output_path = Path(output)
-            else:
-                filename = f"browser_capture_{timestamp}.jpg"
-                output_path = Path("/tmp") / filename
-            
-            output_path.write_bytes(screenshot_bytes)
-            
-            print(json.dumps({
-                "success": True, 
-                "path": str(output_path),
-                "full_page": full_page,
-                "format": "jpeg"
-            }))
-                
-        except Exception as e:
-            print(json.dumps({"success": False, "error": str(e)}), file=sys.stderr)
-            sys.exit(1)
-        finally:
-            await context.close()
-            await browser.close()
+Standalone (no daemon):
+  browser capture <url> [-f] [-o path]   Headless screenshot (viewport; -f full page)
+  browser install                        Install Chromium runtime
+  browser cleanup                        Kill Chromium processes started by this tool
+
+Daemon (start with: browser-daemon):
+  browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
+  browser list [--table]                 Sessions as JSON (--table for humans)
+  browser <id> show | hide               Move the session to a visible window / back to headless
+  browser <id> delete                    Close session and forget its cookies
+  browser shutdown                       Stop the daemon (sessions are saved and restored on next start)
+
+Page commands (all print JSON; add -s/--snapshot to include a fresh snapshot in the result):
+  browser <id> navigate <url> [--wait load|domcontentloaded|networkidle]
+  browser <id> snapshot [scope-selector] [--all] [--max N] [--json]
+                                         Interactive elements as "@e12 button "Create"" lines.
+                                         --all adds text blocks; --json gives structured output
+  browser <id> click <target> [--double]
+  browser <id> type <target> <text> [--sequential] [--submit]
+  browser <id> press <key> [target]      e.g. Enter, Tab, Control+a
+  browser <id> hover <target>
+  browser <id> select <target> <value>   <select> by value or label
+  browser <id> scroll [up|down] [px]     or: scroll <target> to bring it into view
+  browser <id> text [selector]           Readable text of the page or element
+  browser <id> wait [--text T | --selector S] [--gone] [--timeout ms]
+  browser <id> screenshot [target] [-o path] [-f] [-q quality]
+  browser <id> eval <js-expression>
+  browser <id> console [--clear]
+  browser <id> back | forward
+  browser <id> batch                     Read JSON lines {"action":..,"params":{..}} from stdin,
+                                         run them in order in one round-trip, stop at first failure
+
+Targets: @e12 (ref from snapshot, preferred) | CSS selector | text=Create | role=button[name=Create]
+         | label=Widget name | placeholder=Search — or flags --text/--role/--name/--label/--placeholder.
+"""
 
 
+# ---------------------------------------------------------------------------
 async def send_request(request: dict) -> dict:
     try:
-        reader, writer = await asyncio.open_unix_connection(str(SOCKET_PATH))
+        for attempt in range(5):  # daemon may be (re)starting
+            try:
+                reader, writer = await asyncio.open_unix_connection(str(SOCKET_PATH))
+                break
+            except (FileNotFoundError, ConnectionRefusedError):
+                if attempt == 4:
+                    raise
+                await asyncio.sleep(0.1)
         writer.write(json.dumps(request).encode())
         await writer.drain()
-        writer.write_eof()  # Signal we're done writing
-        
-        # Read all data until connection is closed
-        chunks = []
-        while True:
-            chunk = await reader.read(65536)
-            if not chunk:
-                break
-            chunks.append(chunk)
-        
-        data = b''.join(chunks)
+        writer.write_eof()
+        data = await reader.read()
         writer.close()
         await writer.wait_closed()
         return json.loads(data.decode())
@@ -102,97 +75,162 @@ async def send_request(request: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def cmd_create():
-    result = await send_request({"action": "create"})
-    if result["success"]:
-        print(result["session_id"])
+def out(result: dict):
+    """Print results compactly: snapshot text as-is, everything else as JSON."""
+    snap = result.pop("snapshot", None) if isinstance(result, dict) else None
+    if snap is not None and result.get("success") and set(result) <= {"success", "url", "title", "settled", "warning"}:
+        print(snap)
     else:
-        print(f"Error: {result.get('error')}", file=sys.stderr)
+        print(json.dumps(result, indent=2))
+        if snap is not None:
+            print(snap)
+    if isinstance(result, dict) and not result.get("success", True):
         sys.exit(1)
 
 
-async def cmd_list():
-    result = await send_request({"action": "list"})
-    if not result["success"]:
-        print(f"Error: {result.get('error')}", file=sys.stderr)
-        sys.exit(1)
-
-    sessions = result.get("sessions", [])
-    if not sessions:
-        print("No active sessions")
-        return
-
-    print(f"{'SESSION_ID':<12} {'URL':<50} {'TITLE'}")
-    print("-" * 100)
-    for s in sessions:
-        url = s["url"][:48] if s["url"] else "(empty)"
-        title = s["title"][:30] if s["title"] else ""
-        print(f"{s['session_id']:<12} {url:<50} {title}")
-
-
-async def cmd_delete(session_id: str):
-    result = await send_request({"action": "delete", "session_id": session_id})
-    if result["success"]:
-        print(f"Deleted session {session_id}")
-    else:
-        print(f"Error: {result.get('error')}", file=sys.stderr)
-        sys.exit(1)
+def parse_flags(args: list[str], bools: set, valued: set) -> tuple[list[str], dict]:
+    """Split positional args from --flags. Values for `valued` flags take the next arg."""
+    pos, flags, i = [], {}, 0
+    while i < len(args):
+        a = args[i]
+        if a in bools:
+            flags[a.lstrip("-")] = True
+        elif a in valued and i + 1 < len(args):
+            flags[a.lstrip("-")] = args[i + 1]
+            i += 1
+        elif a.startswith("--") and "=" in a:
+            k, v = a[2:].split("=", 1)
+            flags[k] = v
+        else:
+            pos.append(a)
+        i += 1
+    return pos, flags
 
 
-async def cmd_navigate(session_id: str, url: str):
-    result = await send_request({"action": "navigate", "session_id": session_id, "params": {"url": url}})
-    print_json(result)
+TARGET_FLAGS = {"--text", "--role", "--name", "--label", "--placeholder"}
+COMMON_BOOLS = {"-s", "--snapshot"}
 
 
-async def cmd_snapshot(session_id: str, selector: Optional[str]):
-    params = {"selector": selector} if selector else {}
-    result = await send_request({"action": "snapshot", "session_id": session_id, "params": params})
-    print_json(result)
+def target_params(flags: dict) -> dict:
+    p = {k: flags[k] for k in ("text", "role", "name", "label", "placeholder") if k in flags}
+    if flags.get("s") or flags.get("snapshot"):
+        p["snap"] = True
+    return p
 
 
-async def cmd_click(session_id: str, selector: str):
-    result = await send_request({"action": "click", "session_id": session_id, "params": {"selector": selector}})
-    print_json(result)
+def build(session_id: str, action: str, rest: list[str]) -> Optional[dict]:
+    """Translate CLI words into one daemon request. Returns None for unknown actions."""
+    pos, f = parse_flags(rest, COMMON_BOOLS | {"--all", "--json", "--double", "--sequential", "--submit", "--gone",
+                                               "-f", "--full-page", "--clear", "--table"},
+                         TARGET_FLAGS | {"--wait", "--max", "--timeout", "-o", "--output", "-q", "--quality",
+                                         "--selector", "--format"})
+    tp = target_params(f)
+    req = lambda a, p: {"action": a, "session_id": session_id, "params": p}
+    if action == "navigate" and pos:
+        p = {"url": pos[0], **tp}
+        if "wait" in f: p["wait"] = f["wait"]
+        if "timeout" in f: p["timeout"] = float(f["timeout"])
+        return req("navigate", p)
+    if action == "snapshot":
+        p = {}
+        if pos: p["selector"] = pos[0]
+        if f.get("all"): p["all"] = True
+        if "max" in f: p["max"] = int(f["max"])
+        if f.get("json") or f.get("format") == "json": p["format"] = "json"
+        return req("snapshot", p)
+    if action == "click":
+        p = {"selector": pos[0] if pos else "", **tp}
+        if f.get("double"): p["double"] = True
+        return req("click", p)
+    if action == "type":
+        if tp.keys() - {"snap"}:
+            text = pos[0] if pos else ""; sel = ""
+        elif len(pos) >= 2:
+            sel, text = pos[0], pos[1]
+        else:
+            return None
+        p = {"selector": sel, "text_value": text, **tp}
+        if f.get("sequential"): p["sequential"] = True
+        if f.get("submit"): p["submit"] = True
+        return req("type", p)
+    if action == "press" and pos:
+        return req("press_key", {"key": pos[0], "selector": pos[1] if len(pos) > 1 else "", **tp})
+    if action == "hover":
+        return req("hover", {"selector": pos[0] if pos else "", **tp})
+    if action == "select":
+        if tp.keys() - {"snap"} and pos:
+            return req("select_option", {"selector": "", "value": pos[0], **tp})
+        if len(pos) >= 2:
+            return req("select_option", {"selector": pos[0], "value": pos[1], **tp})
+        return None
+    if action == "scroll":
+        p = {**tp}
+        for a in pos:
+            if a in ("up", "down"): p["direction"] = a
+            elif a.lstrip("-").isdigit(): p["amount"] = int(a)
+            else: p["selector"] = a
+        return req("scroll", p)
+    if action == "text":
+        p = {}
+        if pos: p["selector"] = pos[0]
+        if "max" in f: p["max"] = int(f["max"])
+        return req("text", p)
+    if action == "wait":
+        p = {}
+        if "text" in f: p["text"] = f["text"]
+        if "selector" in f: p["selector"] = f["selector"]
+        elif pos: p["selector"] = pos[0]
+        if f.get("gone"): p["gone"] = True
+        if "timeout" in f: p["timeout"] = float(f["timeout"])
+        return req("wait", p)
+    if action == "screenshot":
+        p = {k: v for k, v in tp.items() if k != "snap"}
+        if pos: p["selector"] = pos[0]
+        o = f.get("o") or f.get("output")
+        if o: p["output"] = o
+        if f.get("f") or f.get("full-page"): p["full_page"] = True
+        q = f.get("q") or f.get("quality")
+        if q: p["quality"] = int(q)
+        return req("screenshot", p)
+    if action == "eval" and pos:
+        return req("eval", {"expression": " ".join(pos)})
+    if action == "console":
+        return req("console_logs", {"clear": bool(f.get("clear"))})
+    if action == "back":
+        return req("go_back", tp)
+    if action == "forward":
+        return req("go_forward", tp)
+    if action in ("show", "hide", "delete"):
+        return {"action": action, "session_id": session_id}
+    return None
 
 
-async def cmd_type(session_id: str, selector: str, text: str):
-    result = await send_request({"action": "type", "session_id": session_id, "params": {"selector": selector, "text": text}})
-    print_json(result)
+# ---------------------------------------------------------------------------
+async def cmd_capture(url: str, full_page: bool = False, output: Optional[str] = None):
+    """Standalone screenshot without the daemon."""
+    import time
+    from playwright.async_api import async_playwright
 
-
-async def cmd_hover(session_id: str, selector: str):
-    result = await send_request({"action": "hover", "session_id": session_id, "params": {"selector": selector}})
-    print_json(result)
-
-
-async def cmd_select_option(session_id: str, selector: str, value: str):
-    result = await send_request({"action": "select_option", "session_id": session_id, "params": {"selector": selector, "value": value}})
-    print_json(result)
-
-
-async def cmd_press_key(session_id: str, key: str):
-    result = await send_request({"action": "press_key", "session_id": session_id, "params": {"key": key}})
-    print_json(result)
-
-
-async def cmd_screenshot(session_id: str, selector: Optional[str], output: Optional[str] = None):
-    params = {}
-    if selector:
-        params["selector"] = selector
-    if output:
-        params["output"] = output
-    result = await send_request({"action": "screenshot", "session_id": session_id, "params": params})
-    print_json(result)
-
-
-async def cmd_go_back(session_id: str):
-    result = await send_request({"action": "go_back", "session_id": session_id})
-    print_json(result)
-
-
-async def cmd_go_forward(session_id: str):
-    result = await send_request({"action": "go_forward", "session_id": session_id})
-    print_json(result)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(viewport={"width": 1280, "height": 800})
+        page = await context.new_page()
+        try:
+            await page.goto(url, wait_until="load", timeout=30000)
+            try:
+                await page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
+            shot = await page.screenshot(full_page=full_page, type="jpeg", quality=70)
+            path = Path(output).expanduser() if output else Path("/tmp") / f"browser_capture_{int(time.time())}.jpg"
+            path.write_bytes(shot)
+            print(json.dumps({"success": True, "path": str(path), "full_page": full_page, "format": "jpeg"}))
+        except Exception as e:
+            print(json.dumps({"success": False, "error": str(e)}), file=sys.stderr)
+            sys.exit(1)
+        finally:
+            await context.close()
+            await browser.close()
 
 
 def cmd_install():
@@ -205,151 +243,93 @@ def cmd_install():
 
 
 def cmd_cleanup():
-    """Kill all Playwright Chrome processes."""
-    try:
-        result = subprocess.run(
-            ["pkill", "-f", "playwright"],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            print("Killed Playwright Chrome processes")
-        elif result.returncode == 1:
-            print("No Playwright processes found")
-        else:
-            print(f"Error: pkill returned {result.returncode}", file=sys.stderr)
-            sys.exit(1)
-    except FileNotFoundError:
-        print("Error: pkill not found", file=sys.stderr)
+    """Kill only Chromium processes launched from Playwright's browser cache (not other tools' browsers)."""
+    ps = subprocess.run(["ps", "-Ao", "pid,command"], capture_output=True, text=True).stdout
+    killed = 0
+    for line in ps.splitlines()[1:]:
+        pid, _, cmd = line.strip().partition(" ")
+        if "ms-playwright" in cmd and ("chrom" in cmd.lower()):
+            try:
+                os.kill(int(pid), 15)
+                killed += 1
+            except Exception:
+                pass
+    print(f"Killed {killed} Chromium process(es)" if killed else "No Playwright Chromium processes found")
+
+
+async def cmd_batch(session_id: str):
+    reqs = []
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        r = json.loads(line)
+        if "action" in r and "session_id" not in r:
+            r["session_id"] = session_id
+        elif "cmd" in r:  # {"cmd": "click @e3 -s"} shorthand
+            words = r["cmd"].split()
+            r = build(session_id, words[0], words[1:]) or {"action": "unknown"}
+        reqs.append(r)
+    result = await send_request({"action": "batch", "requests": reqs})
+    print(json.dumps(result, indent=2))
+    if not result.get("success") or any(not r.get("success") for r in result.get("results", [])):
         sys.exit(1)
-
-
-def print_json(data: dict):
-    print(json.dumps(data, indent=2))
-
-
-def main():
-    logging.basicConfig(level=logging.WARNING)
-
-    args = sys.argv[1:]
-
-    if len(args) == 0 or args[0] in ("-h", "--help"):
-        print("""Browser CLI - Authenticated browser automation
-
-Standalone Commands (no daemon required):
-  browser capture <url> [options]       Capture screenshot to /tmp
-    Options:
-      -f, --full-page                   Capture full page (default: viewport only)
-      -o, --output <path>               Custom output path
-
-    Examples:
-      browser capture https://example.com
-      browser capture https://example.com -f
-      browser capture https://example.com -o ./screenshot.jpg
-
-Daemon Commands (requires browser-daemon running):
-  browser install                       Install Chromium runtime
-  browser cleanup                       Kill stale Chrome processes
-  browser create                        Create new session (opens browser for login)
-  browser list                          List active sessions
-  browser <id> navigate <url>          Navigate to URL
-  browser <id> snapshot [selector]      Get page elements
-  browser <id> click <selector>         Click element
-  browser <id> type <selector> <text>   Type text
-  browser <id> hover <selector>         Hover element
-  browser <id> select <selector> <val>  Select dropdown option
-  browser <id> press <key>              Press keyboard key
-  browser <id> screenshot [selector] [-o <path>]
-                                        Take screenshot (JPEG, saved to /tmp)
-                                        Use -o for custom output path
-  browser <id> back                      Go back
-  browser <id> forward                   Go forward
-  browser <id> delete                    Delete session
-  browser -h, --help                    Show this help
-
-Start daemon: browser-daemon
-""")
-        return
-
-    asyncio.run(_main(args))
 
 
 async def _main(args: list[str]):
     cmd = args[0]
-
     if cmd == "capture" and len(args) >= 2:
-        url = args[1]
-        full_page = False  # viewport only unless -f/--full-page (matches --help and README)
-        output = None
-        
-        # Parse flags
-        i = 2
-        while i < len(args):
-            if args[i] in ("-f", "--full-page"):
-                full_page = True
-                i += 1
-            elif args[i] in ("-o", "--output") and i + 1 < len(args):
-                output = args[i + 1]
-                i += 2
-            else:
-                i += 1
-        
-        await cmd_capture(url, full_page=full_page, output=output)
+        pos, f = parse_flags(args[1:], {"-f", "--full-page"}, {"-o", "--output"})
+        await cmd_capture(pos[0], full_page=bool(f.get("f") or f.get("full-page")), output=f.get("o") or f.get("output"))
     elif cmd == "install":
         cmd_install()
     elif cmd == "cleanup":
         cmd_cleanup()
     elif cmd == "create":
-        await cmd_create()
-    elif cmd == "list":
-        await cmd_list()
-    elif cmd == "delete" and len(args) >= 2:
-        await cmd_delete(args[1])
-    elif len(args) >= 2:
-        session_id = args[0]
-        action = args[1]
-
-        if action == "navigate" and len(args) >= 3:
-            await cmd_navigate(session_id, args[2])
-        elif action == "snapshot":
-            selector = args[2] if len(args) >= 3 else None
-            await cmd_snapshot(session_id, selector)
-        elif action == "click" and len(args) >= 3:
-            await cmd_click(session_id, args[2])
-        elif action == "type" and len(args) >= 4:
-            await cmd_type(session_id, args[2], args[3])
-        elif action == "hover" and len(args) >= 3:
-            await cmd_hover(session_id, args[2])
-        elif action == "select" and len(args) >= 4:
-            await cmd_select_option(session_id, args[2], args[3])
-        elif action == "press" and len(args) >= 3:
-            await cmd_press_key(session_id, args[2])
-        elif action == "screenshot":
-            selector = None
-            output = None
-            i = 2
-            while i < len(args):
-                if args[i] in ("-o", "--output") and i + 1 < len(args):
-                    output = args[i + 1]
-                    i += 2
-                elif args[i] and not args[i].startswith("-"):
-                    selector = args[i]
-                    i += 1
-                else:
-                    i += 1
-            await cmd_screenshot(session_id, selector, output)
-        elif action == "back":
-            await cmd_go_back(session_id)
-        elif action == "forward":
-            await cmd_go_forward(session_id)
-        elif action == "delete":
-            await cmd_delete(session_id)
+        visible = any(a in ("--show", "--visible", "--headed") for a in args[1:])
+        r = await send_request({"action": "create", "params": {"visible": visible}})
+        if r.get("success"):
+            print(r["session_id"])
         else:
-            print(f"Unknown action or missing args: {action}", file=sys.stderr)
+            print(f"Error: {r.get('error')}", file=sys.stderr)
             sys.exit(1)
+    elif cmd == "list":
+        r = await send_request({"action": "list"})
+        if not r.get("success"):
+            print(f"Error: {r.get('error')}", file=sys.stderr)
+            sys.exit(1)
+        if "--table" in args:
+            print(f"{'SESSION_ID':<10} {'STATE':<11} {'VIS':<4} {'URL':<50} TITLE")
+            for s in r["sessions"]:
+                print(f"{s['session_id']:<10} {s['state']:<11} {'yes' if s['visible'] else 'no':<4} {(s['url'] or '')[:48]:<50} {(s['title'] or '')[:30]}")
+        else:
+            print(json.dumps(r["sessions"], indent=2))
+    elif cmd == "shutdown":
+        out(await send_request({"action": "shutdown"}))
+    elif cmd == "delete" and len(args) >= 2:
+        out(await send_request({"action": "delete", "session_id": args[1]}))
+    elif len(args) >= 2:
+        session_id, action, rest = args[0], args[1], args[2:]
+        if action == "batch":
+            await cmd_batch(session_id)
+            return
+        req = build(session_id, action, rest)
+        if req is None:
+            print(f"Unknown action or missing args: {action}\n", file=sys.stderr)
+            print(HELP, file=sys.stderr)
+            sys.exit(2)
+        out(await send_request(req))
     else:
-        print("Invalid command", file=sys.stderr)
-        sys.exit(1)
+        print(HELP, file=sys.stderr)
+        sys.exit(2)
+
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ("-h", "--help"):
+        print(HELP)
+        return
+    asyncio.run(_main(args))
 
 
 if __name__ == "__main__":

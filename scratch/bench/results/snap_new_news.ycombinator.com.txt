@@ -1,0 +1,233 @@
+url: https://news.ycombinator.com/
+title: Hacker News
+scroll: 0/417 (viewport 1280x800; [below]/[above] = outside viewport)
+@e1 link href="https://news.ycombinator.com"
+@e2 link "Hacker News" href="news"
+@e3 link "new" href="newest"
+@e4 link "past" href="front"
+@e5 link "comments" href="newcomments"
+@e6 link "ask" href="ask"
+@e7 link "show" href="show"
+@e8 link "jobs" href="jobs"
+@e9 link "submit" href="submit"
+@e10 link "login" href="login?goto=news"
+@e11 link href="vote?id=49402213&how=up&goto=news"
+@e12 link "Figmimic – A bookmarklet to copy any webpage into Figma as editable layers" href="https://marcua.net/minitools/figmimic/"
+@e13 link "marcua.net" href="from?site=marcua.net"
+@e14 link "speckx" href="user?id=speckx"
+@e15 link "1 hour ago" href="item?id=49402213"
+@e16 link "hide" href="hide?id=49402213&goto=news"
+@e17 link "1 comment" href="item?id=49402213"
+@e18 link href="vote?id=49404380&how=up&goto=news"
+@e19 link "NanoGPT Speedrun Frontier" href="https://www.primeintellect.ai/research/nanogpt-speedrun"
+@e20 link "primeintellect.ai" href="from?site=primeintellect.ai"
+@e21 link "stared" href="user?id=stared"
+@e22 link "3 hours ago" href="item?id=49404380"
+@e23 link "hide" href="hide?id=49404380&goto=news"
+@e24 link "14 comments" href="item?id=49404380"
+@e25 link href="vote?id=49402189&how=up&goto=news"
+@e26 link "Scrap (2006)" href="https://twitter.com/moxie/status/2091218652133732491"
+@e27 link "twitter.com/moxie" href="from?site=twitter.com/moxie"
+@e28 link "tosh" href="user?id=tosh"
+@e29 link "8 hours ago" href="item?id=49402189"
+@e30 link "hide" href="hide?id=49402189&goto=news"
+@e31 link "177 comments" href="item?id=49402189"
+@e32 link href="vote?id=49402232&how=up&goto=news"
+@e33 link "Why your local LLM feels dumber than it is" href="https://forum.level1techs.com/t/why-your-local-llm-feels-dumber-than-it-is/253917"
+@e34 link "level1techs.com" href="from?site=level1techs.com"
+@e35 link "felineflock" href="user?id=felineflock"
+@e36 link "7 hours ago" href="item?id=49402232"
+@e37 link "hide" href="hide?id=49402232&goto=news"
+@e38 link "64 comments" href="item?id=49402232"
+@e39 link href="vote?id=49400408&how=up&goto=news"
+@e40 link "ElevenLabs, TwelveLabs, ThirteenLabs" href="https://quantumi.sh/public/labs.html"
+@e41 link "quantumi.sh" href="from?site=quantumi.sh"
+@e42 link "jemoka" href="user?id=jemoka"
+@e43 link "11 hours ago" href="item?id=49400408"
+@e44 link "hide" href="hide?id=49400408&goto=news"
+@e45 link "101 comments" href="item?id=49400408"
+@e46 link href="vote?id=49351802&how=up&goto=news"
+@e47 link "Hister – A private, full content search index that you control" href="https://hister.org/"
+@e48 link "hister.org" href="from?site=hister.org"
+@e49 link "auraham" href="user?id=auraham"
+@e50 link "10 hours ago" href="item?id=49351802"
+@e51 link "hide" href="hide?id=49351802&goto=news"
+@e52 link "66 comments" href="item?id=49351802"
+@e53 link href="vote?id=49402781&how=up&goto=news"
+@e54 link "NetBSD and my life (2005)" href="https://mail-index.netbsd.org/netbsd-advocacy/2005/09/10/0000.html"
+@e55 link "netbsd.org" href="from?site=netbsd.org"
+@e56 link "gnyeki" href="user?id=gnyeki"
+@e57 link "7 hours ago" href="item?id=49402781"
+@e58 link "hide" href="hide?id=49402781&goto=news"
+@e59 link "24 comments" href="item?id=49402781"
+@e60 link href="vote?id=49346854&how=up&goto=news"
+@e61 link "typ.ing" href="https://typ.ing/"
+@e62 link "typ.ing" href="from?site=typ.ing"
+@e63 link "bookofjoe" href="user?id=bookofjoe"
+@e64 link "11 hours ago" href="item?id=49346854"
+@e65 link "hide" href="hide?id=49346854&goto=news"
+@e66 link "56 comments" href="item?id=49346854"
+@e67 link href="vote?id=49355659&how=up&goto=news"
+@e68 link "RF Cafe" href="https://www.rfcafe.com/"
+@e69 link "rfcafe.com" href="from?site=rfcafe.com"
+@e70 link "gregsadetsky" href="user?id=gregsadetsky"
+@e71 link "10 hours ago" href="item?id=49355659"
+@e72 link "hide" href="hide?id=49355659&goto=news"
+@e73 link "25 comments" href="item?id=49355659"
+@e74 link href="vote?id=49402181&how=up&goto=news"
+@e75 link "I set a trap for a book-marketing scammer (2025)" href="https://rwwgreene.substack.com/p/i-set-a-trap-for-a-book-marketing"
+@e76 link "rwwgreene.substack.com" href="from?site=rwwgreene.substack.com"
+@e77 link "rznicolet" href="user?id=rznicolet"
+@e78 link "1 hour ago" href="item?id=49402181"
+@e79 link "hide" href="hide?id=49402181&goto=news"
+@e80 link "7 comments" href="item?id=49402181"
+@e81 link href="vote?id=49387959&how=up&goto=news"
+@e82 link "How a Texas student blew the whistle on a rogue AI hacking attempt" href="https://www.reuters.com/world/how-texas-student-blew-whistle-rogue-ai-hacking-attempt-2026-08-20/"
+@e83 link "reuters.com" href="from?site=reuters.com"
+@e84 link "olalonde" href="user?id=olalonde"
+@e85 link "10 hours ago" href="item?id=49387959"
+@e86 link "hide" href="hide?id=49387959&goto=news"
+@e87 link "42 comments" href="item?id=49387959"
+@e88 link href="vote?id=49399898&how=up&goto=news"
+@e89 link "A Friendly Introduction to Racket" href="https://geometridae.bearblog.dev/a-friendly-introduction-to-racket/"
+@e90 link "geometridae.bearblog.dev" href="from?site=geometridae.bearblog.dev"
+@e91 link "signa11" href="user?id=signa11"
+@e92 link "12 hours ago" href="item?id=49399898"
+@e93 link "hide" href="hide?id=49399898&goto=news"
+@e94 link "100 comments" href="item?id=49399898"
+@e95 link href="vote?id=49379732&how=up&goto=news"
+@e96 link "ATProto spaces: A new extension to ATProto that enables non-public data" href="https://atproto.com/blog/atproto-spaces-alpha"
+@e97 link "atproto.com" href="from?site=atproto.com"
+@e98 link "grappler" href="user?id=grappler"
+@e99 link "9 hours ago" href="item?id=49379732"
+@e100 link "hide" href="hide?id=49379732&goto=news"
+@e101 link "13 comments" href="item?id=49379732"
+@e102 link href="vote?id=49402107&how=up&goto=news"
+@e103 link "Reading Maps – Journeys from fiction drawn on the real world" href="https://readingmaps.com/"
+@e104 link "readingmaps.com" href="from?site=readingmaps.com"
+@e105 link "hakkikonu" href="user?id=hakkikonu"
+@e106 link "1 hour ago" href="item?id=49402107"
+@e107 link "hide" href="hide?id=49402107&goto=news"
+@e108 link "1 comment" href="item?id=49402107"
+@e109 link href="vote?id=49402741&how=up&goto=news"
+@e110 link "hdiutil is deprecated in macOS 27 Golden Gate" href="https://lapcatsoftware.com/articles/2026/8/7.html"
+@e111 link "lapcatsoftware.com" href="from?site=lapcatsoftware.com"
+@e112 link "zdw" href="user?id=zdw"
+@e113 link "7 hours ago" href="item?id=49402741"
+@e114 link "hide" href="hide?id=49402741&goto=news"
+@e115 link "70 comments" href="item?id=49402741"
+@e116 link href="vote?id=49398152&how=up&goto=news"
+@e117 link "Munder Difflin – Agent harness to run an office of your clones" href="https://munderdiffl.in/"
+@e118 link "munderdiffl.in" href="from?site=munderdiffl.in"
+@e119 link "simonpure" href="user?id=simonpure"
+@e120 link "16 hours ago" href="item?id=49398152"
+@e121 link "hide" href="hide?id=49398152&goto=news"
+@e122 link "115 comments" href="item?id=49398152"
+@e123 link href="vote?id=49392536&how=up&goto=news"
+@e124 link "One night in Uzbekistan: Why was this one data point so influential?" href="https://statmodeling.stat.columbia.edu/2026/08/20/we-couldnt-reproduce-their-findings-and-realized-that-it-was-all-driven-by-weird-data-from-uzbekistan/"
+@e125 link "columbia.edu" href="from?site=columbia.edu"
+@e126 link "paulpauper" href="user?id=paulpauper"
+@e127 link "10 hours ago" href="item?id=49392536"
+@e128 link "hide" href="hide?id=49392536&goto=news"
+@e129 link "13 comments" href="item?id=49392536"
+@e130 link href="vote?id=49402202&how=up&goto=news"
+@e131 link "Thinking in Python" href="https://thinkinginpython.com/"
+@e132 link "thinkinginpython.com" href="from?site=thinkinginpython.com"
+@e133 link "pjacotg" href="user?id=pjacotg"
+@e134 link "8 hours ago" href="item?id=49402202"
+@e135 link "hide" href="hide?id=49402202&goto=news"
+@e136 link "12 comments" href="item?id=49402202"
+@e137 link href="vote?id=49393051&how=up&goto=news"
+@e138 link "A week of using Codex more than Claude" href="https://allaboutcoding.ghinda.com/a-week-of-using-codex-more-than-claude/"
+@e139 link "ghinda.com" href="from?site=ghinda.com"
+@e140 link "speckx" href="user?id=speckx"
+@e141 link "19 hours ago" href="item?id=49393051"
+@e142 link "hide" href="hide?id=49393051&goto=news"
+@e143 link "138 comments" href="item?id=49393051"
+@e144 link href="vote?id=49380200&how=up&goto=news"
+@e145 link "Protocol-Aware Deterministic Simulation Testing" href="https://tigerbeetle.com/blog/2026-08-20-protocol-aware-dst/"
+@e146 link "tigerbeetle.com" href="from?site=tigerbeetle.com"
+@e147 link "sebg" href="user?id=sebg"
+@e148 link "2 hours ago" href="item?id=49380200"
+@e149 link "hide" href="hide?id=49380200&goto=news"
+@e150 link "discuss" href="item?id=49380200"
+@e151 link href="vote?id=49397074&how=up&goto=news"
+@e152 link "Canada will match US tariffs 'dollar for dollar' as trade talks break down" href="https://www.bbc.com/news/articles/cvgvyy4x2mvo"
+@e153 link "bbc.com" href="from?site=bbc.com"
+@e154 link "tartoran" href="user?id=tartoran"
+@e155 link "19 hours ago" href="item?id=49397074"
+@e156 link "hide" href="hide?id=49397074&goto=news"
+@e157 link "1241 comments" href="item?id=49397074"
+@e158 link href="vote?id=49373822&how=up&goto=news"
+@e159 link "Conway's Game of Life in real life" href="https://blog.coredump.cx/p/conways-game-of-life-in-real-life"
+@e160 link "coredump.cx" href="from?site=coredump.cx"
+@e161 link "surprisetalk" href="user?id=surprisetalk"
+@e162 link "6 hours ago" href="item?id=49373822"
+@e163 link "hide" href="hide?id=49373822&goto=news"
+@e164 link "8 comments" href="item?id=49373822"
+@e165 link href="vote?id=49375176&how=up&goto=news" [below]
+@e166 link "ProgramBench Vetted: Reverse Engineering from a Runnable Binary" href="https://vetto.ai/companies/programbench-vetted.html" [below]
+@e167 link "vetto.ai" href="from?site=vetto.ai" [below]
+@e168 link "rigelbm" href="user?id=rigelbm" [below]
+@e169 link "5 hours ago" href="item?id=49375176" [below]
+@e170 link "hide" href="hide?id=49375176&goto=news" [below]
+@e171 link "1 comment" href="item?id=49375176" [below]
+@e172 link href="vote?id=49376197&how=up&goto=news" [below]
+@e173 link "Autolith: A programming agent with a live runtime" href="https://www.lambda-symbolics.com/autolith" [below]
+@e174 link "lambda-symbolics.com" href="from?site=lambda-symbolics.com" [below]
+@e175 link "vismit2000" href="user?id=vismit2000" [below]
+@e176 link "20 hours ago" href="item?id=49376197" [below]
+@e177 link "hide" href="hide?id=49376197&goto=news" [below]
+@e178 link "43 comments" href="item?id=49376197" [below]
+@e179 link href="vote?id=49360643&how=up&goto=news" [below]
+@e180 link "What's in a PowerPoint File?" href="https://editide.com/blog/what-is-a-pptx-file/" [below]
+@e181 link "editide.com" href="from?site=editide.com" [below]
+@e182 link "danielochoa0620" href="user?id=danielochoa0620" [below]
+@e183 link "8 hours ago" href="item?id=49360643" [below]
+@e184 link "hide" href="hide?id=49360643&goto=news" [below]
+@e185 link "32 comments" href="item?id=49360643" [below]
+@e186 link href="vote?id=49377316&how=up&goto=news" [below]
+@e187 link "Why it might be time to rethink the human family tree" href="https://nautil.us/why-it-might-be-time-to-rethink-the-human-family-tree-1283985" [below]
+@e188 link "nautil.us" href="from?site=nautil.us" [below]
+@e189 link "Anon84" href="user?id=Anon84" [below]
+@e190 link "10 hours ago" href="item?id=49377316" [below]
+@e191 link "hide" href="hide?id=49377316&goto=news" [below]
+@e192 link "31 comments" href="item?id=49377316" [below]
+@e193 link href="vote?id=49394827&how=up&goto=news" [below]
+@e194 link "Show HN: OzBrain, a shared brain for knowledge between agents and your team" href="https://ozbrain.com" [below]
+@e195 link "ozbrain.com" href="from?site=ozbrain.com" [below]
+@e196 link "dariusmonsef" href="user?id=dariusmonsef" [below]
+@e197 link "18 hours ago" href="item?id=49394827" [below]
+@e198 link "hide" href="hide?id=49394827&goto=news" [below]
+@e199 link "46 comments" href="item?id=49394827" [below]
+@e200 link href="vote?id=49398158&how=up&goto=news" [below]
+@e201 link "Z80 – The 1970s Microprocessor Still Alive (2021)" href="https://www.computer.org/csdl/magazine/mi/2021/06/09623402/1yJTvlRLmhi" [below]
+@e202 link "computer.org" href="from?site=computer.org" [below]
+@e203 link "asdefghyk" href="user?id=asdefghyk" [below]
+@e204 link "16 hours ago" href="item?id=49398158" [below]
+@e205 link "hide" href="hide?id=49398158&goto=news" [below]
+@e206 link "55 comments" href="item?id=49398158" [below]
+@e207 link href="vote?id=49393052&how=up&goto=news" [below]
+@e208 link "Rust Glancer: Rust LSP using 100x less RAM" href="https://rust-glancer.github.io/blog/hello-world/" [below]
+@e209 link "rust-glancer.github.io" href="from?site=rust-glancer.github.io" [below]
+@e210 link "matklad" href="user?id=matklad" [below]
+@e211 link "1 day ago" href="item?id=49393052" [below]
+@e212 link "hide" href="hide?id=49393052&goto=news" [below]
+@e213 link "97 comments" href="item?id=49393052" [below]
+@e214 link href="vote?id=49399524&how=up&goto=news" [below]
+@e215 link "A Kantian Critique of \"Sorry\" by Justin Bieber" href="https://decodingvibes.com/blog/a-kantian-critique-of-sorry-by-justin-bieber/" [below]
+@e216 link "decodingvibes.com" href="from?site=decodingvibes.com" [below]
+@e217 link "altmanaltman" href="user?id=altmanaltman" [below]
+@e218 link "11 hours ago" href="item?id=49399524" [below]
+@e219 link "hide" href="hide?id=49399524&goto=news" [below]
+@e220 link "83 comments" href="item?id=49399524" [below]
+@e221 link "More" href="?p=2" [below]
+@e222 link "Guidelines" href="newsguidelines.html" [below]
+@e223 link "FAQ" href="newsfaq.html" [below]
+@e224 link "Lists" href="lists" [below]
+@e225 link "API" href="https://github.com/HackerNews/API" [below]
+@e226 link "Security" href="security.html" [below]
+@e227 link "Legal" href="https://www.ycombinator.com/legal/" [below]
+@e228 link "Apply to YC" href="https://www.ycombinator.com/apply/" [below]
+@e229 link "Contact" href="mailto:hn@ycombinator.com" [below]
+@e230 textbox "q" [below]

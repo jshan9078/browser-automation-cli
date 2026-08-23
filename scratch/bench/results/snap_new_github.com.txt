@@ -1,0 +1,18 @@
+url: https://github.com/login
+title: Sign in to GitHub · GitHub
+@e1 link "Skip to content" href="#start-of-content"
+h1 "Sign in to GitHub"
+@e2 textbox "Username or email address" [required]
+@e3 textbox "Password" type="password" [required]
+@e4 link "Forgot password?" href="/password_reset"
+@e5 button "Sign in" value="Sign in"
+@e6 button "Continue with Google"
+@e7 button "Continue with Apple"
+@e8 link "Create an account" href="/signup?source=login"
+@e9 button "Sign in with a passkey"
+@e10 link "Terms" href="https://docs.github.com/site-policy/github-terms/github-terms-of-service"
+@e11 link "Privacy" href="https://docs.github.com/site-policy/privacy-policies/github-privacy-statement"
+@e12 link "Docs" href="https://docs.github.com"
+@e13 link "Contact GitHub Support" href="https://support.github.com"
+@e14 button "Manage cookies"
+@e15 button "Do not share my personal information"

@@ -1,211 +1,63 @@
-# Release Checklist
+# Release Checklist (browser-automation-cli)
 
-Complete guide for publishing browser-cli to PyPI.
+Package name on PyPI: **browser-automation-cli** (commands `browser`, `browser-daemon`). Tooling is `uv` end to end; no pip/pipx/twine.
 
-## Pre-Release: Test Locally
-
+## 1. Prepare
 ```bash
 cd ~/Desktop/browser-cli
+# bump version in pyproject.toml (e.g. 0.2.1 -> 0.2.2), then:
+uv lock                      # refresh uv.lock for the new version
+uv sync
+```
 
-# Install build tools
-python3 -m pip install --upgrade build twine
-
-# Build the package
-python3 -m build
-
-# Verify dist files exist
-ls dist/
-# Expected: browser_cli-0.1.0-py3-none-any.whl and browser_cli-0.1.0.tar.gz
-
-# Test install from local wheel (no PyPI needed)
-pipx install ./dist/browser_cli-0.1.0-py3-none-any.whl
-
-# If commands not found, add pipx to PATH:
-# export PATH="$HOME/.local/bin:$PATH"
-
-# Verify commands work
+## 2. Test locally from source
+```bash
+uv tool install --force --reinstall --no-cache .   # from this tree; --no-cache matters: uv caches builds by version, so edits without a version bump are otherwise ignored
+browser install              # Chromium for the Playwright version in uv.lock (re-run after any Playwright bump)
 browser --help
-
-# Test standalone capture (no daemon needed)
-browser capture https://example.com
-browser capture https://example.com -f
-browser capture https://example.com -o ./my-screenshot.jpg
-
-# Test daemon workflow
-browser-daemon &
-browser create
-# (manually log in to sites in the opened browser)
+browser capture https://example.com                     # viewport screenshot -> /tmp/browser_capture_<ts>.jpg
+browser capture https://example.com -f -o ./full.jpg    # full page
+browser-daemon &             # visible Chromium window opens
+browser create               # log in manually in the window; prints <session_id>
 browser <session_id> navigate https://example.com
 browser <session_id> snapshot
-browser <session_id> click "a"
 browser <session_id> screenshot
-browser list
-browser delete <session_id>
-
-# Clean up stale Chrome processes (if needed)
-browser cleanup
-
-# Clean up local install
-pipx uninstall browser-cli
+browser <session_id> delete
+kill %1                      # stop the daemon
 ```
 
-## Optional: Create GitHub Repo
-
-Not required for PyPI, but recommended:
-
+## 3. Build
 ```bash
-cd ~/Desktop/browser-cli
-git init
-git add .
-git commit -m "Initial browser-cli package"
-
-# Using GitHub CLI
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
-
-# Or create repo via web and push
+rm -rf dist/
+uv build                     # dist/browser_automation_cli-<ver>-py3-none-any.whl and .tar.gz
 ```
 
-**Update pyproject.toml with your repo URL:**
-```toml
-[project.urls]
-Homepage = "https://github.com/<your-username>/<your-repo>"
-Repository = "https://github.com/<your-username>/<your-repo>"
-```
-
-## Step 1: Create PyPI Accounts
-
-1. **Create TestPyPI account:** https://test.pypi.org/account/register/
-2. **Create PyPI account:** https://pypi.org/account/register/
-3. **Generate API tokens on both sites:**
-   - Go to Account Settings → API Tokens → Add API Token
-   - Name: "browser-cli upload"
-   - Scope: "Entire account"
-   - Copy the token (starts with `pypi-`)
-
-## Step 2: Configure Twine
-
-Create `~/.pypirc`:
-
-```ini
-[distutils]
-index-servers =
-    pypi
-    testpypi
-
-[pypi]
-username = __token__
-password = pypi-YOUR_PYPI_TOKEN_HERE
-
-[testpypi]
-repository = https://test.pypi.org/legacy/
-username = __token__
-password = pypi-YOUR_TESTPYPI_TOKEN_HERE
-```
-
-**Security:**
-- Never commit this file
-- Set permissions: `chmod 600 ~/.pypirc`
-
-## Step 3: Test Upload to TestPyPI
-
+## 4. Publish
+Tokens: PyPI (and optionally TestPyPI) API tokens, scope "project: browser-automation-cli". Keep them in your shell env or a password manager — never in the repo.
 ```bash
-cd ~/Desktop/browser-cli
+# optional dry run against TestPyPI
+UV_PUBLISH_TOKEN=pypi-... uv publish --publish-url https://test.pypi.org/legacy/
+uv tool install --force --index-url https://test.pypi.org/simple/ browser-automation-cli && browser --help
 
-# Rebuild if you made changes
-python3 -m build
-
-# Upload to TestPyPI
-python3 -m twine upload --repository testpypi dist/*
-
-# If you didn't configure .pypirc, use:
-# python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+# real release
+UV_PUBLISH_TOKEN=pypi-... uv publish
 ```
 
-## Step 4: Verify TestPyPI Install
-
+## 5. Verify the published package
 ```bash
-# Install from TestPyPI
-pipx install --index-url https://test.pypi.org/simple/ browser-cli
-
-# Test it
+uv tool install --force browser-automation-cli   # from PyPI
+browser install
 browser capture https://example.com
-
-# Clean up
-pipx uninstall browser-cli
 ```
 
-## Step 5: Publish to Real PyPI
-
+## 6. Post-release
 ```bash
-cd ~/Desktop/browser-cli
-
-# Final build
-python3 -m build
-
-# Upload to PyPI
-python3 -m twine upload dist/*
-
-# Or if you didn't configure .pypirc:
-# python3 -m twine upload --username __token__ --password YOUR_PYPI_TOKEN dist/*
+git tag v<ver> && git push origin main --tags
 ```
-
-## Step 6: Verify Production Install
-
-```bash
-# Clean install from PyPI
-pipx install browser-cli
-
-# Test all commands
-browser --help
-browser capture https://example.com
-
-# If you need the full daemon functionality:
-browser install        # Install Chromium
-browser-daemon         # Start daemon
-browser create         # Create session
-```
+Then confirm https://pypi.org/project/browser-automation-cli/ shows the new version.
 
 ## Troubleshooting
-
-**"File already exists" on upload:**
-```bash
-# Bump version in pyproject.toml
-# Edit version = "0.1.1"  # increment
-python3 -m build
-python3 -m twine upload dist/*
-```
-
-**Package name already taken:**
-- Choose a different name in `pyproject.toml`
-- Or request transfer if name is squatting
-
-**Build errors:**
-```bash
-# Clean and rebuild
-rm -rf dist/ build/ *.egg-info
-python3 -m build
-```
-
-**Authentication errors:**
-- Verify token hasn't expired
-- Check `~/.pypirc` permissions (should be 600)
-- Ensure you're using `__token__` as username, not your PyPI username
-
-## Post-Release
-
-- Tag the release on GitHub: `git tag v0.1.0 && git push origin v0.1.0`
-- Update documentation with install instructions
-- Announce if applicable
-
-## One-Liner Test
-
-Quick validation that everything works:
-
-```bash
-pipx install browser-cli && \
-browser capture https://example.com && \
-pipx uninstall browser-cli && \
-echo "Success!"
-```
+- **"File already exists"** on publish: the version was already uploaded — bump `pyproject.toml`, `uv lock`, rebuild.
+- **Source edits don't show up after `uv tool install .`**: uv reused a cached wheel for the same version. Use `--reinstall --no-cache`, or bump the version.
+- **`browser` runs an old version**: a leftover pipx install shadows the uv one. `pipx uninstall browser-automation-cli` then `uv tool install --force .` (`ls -la ~/.local/bin/browser` should point into `~/.local/share/uv/tools/`).
+- **Playwright prompts to run `playwright install`**: the Chromium build for the locked Playwright version is missing — `browser install`.

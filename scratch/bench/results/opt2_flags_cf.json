@@ -1,0 +1,90 @@
+{
+  "label": "opt2_flags_cf",
+  "startup_s": 0.8442769170505926,
+  "steps": {
+    "create": {
+      "median_s": 0.2399852710077539,
+      "bytes": 9.0,
+      "tokens": 2.0
+    },
+    "navigate_spa": {
+      "median_s": 0.11985381250269711,
+      "bytes": 120.0,
+      "tokens": 30.0,
+      "ok": true
+    },
+    "snapshot": {
+      "median_s": 0.05725654197158292,
+      "bytes": 24803.0,
+      "tokens": 6201.0,
+      "target_visible": false,
+      "hidden_consent_leaked": false
+    },
+    "click_ambiguous": {
+      "median_s": 0.08838783297687769,
+      "bytes": 101.0,
+      "tokens": 25.0
+    },
+    "type": {
+      "median_s": 0.045861291931942105,
+      "bytes": 22.0,
+      "tokens": 6.0
+    },
+    "press": {
+      "median_s": 0.043563812505453825,
+      "bytes": 22.0,
+      "tokens": 6.0
+    },
+    "click_exact": {
+      "median_s": 0.0692791249603033,
+      "bytes": 101.0,
+      "tokens": 25.0
+    },
+    "snapshot_scoped": {
+      "median_s": 0.058887625054921955,
+      "bytes": 434.0,
+      "tokens": 108.0
+    },
+    "navigate_static": {
+      "median_s": 0.08115035452647135,
+      "bytes": 109.0,
+      "tokens": 27.0
+    },
+    "back": {
+      "median_s": 0.08164385455893353,
+      "bytes": 101.0,
+      "tokens": 25.0
+    },
+    "screenshot": {
+      "median_s": 0.08073399995919317,
+      "bytes": 94.0,
+      "tokens": 24.0,
+      "file_kb": 61.8779296875
+    },
+    "list": {
+      "median_s": 0.04321202094433829,
+      "bytes": 251.0,
+      "tokens": 63.0
+    }
+  },
+  "correct": {
+    "ambiguous_click_hit_create": [
+      false,
+      false
+    ],
+    "form_flow": [
+      true,
+      true
+    ]
+  },
+  "iters": 2,
+  "python_floor_s": 0.024488458991982043,
+  "idle": {
+    "cpu_pct": 100.20000000000002,
+    "gpu_pct": 15.000000000000002,
+    "rss_mb": 1712.890625,
+    "procs": 9
+  },
+  "total_task_s": 1.0098155429004692,
+  "total_task_tokens": 6542.0
+}

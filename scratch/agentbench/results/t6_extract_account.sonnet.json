@@ -1,0 +1,28 @@
+{
+  "task": "t6_extract_account",
+  "run": "sonnet",
+  "success": true,
+  "answer": "ops-admin@acme-internal.test",
+  "wall_s": 15.58,
+  "wall_total_s": 36.3,
+  "cli_calls": 9,
+  "failed_calls": 0,
+  "cli_time_s": 0.75,
+  "tool_output_tokens": 955,
+  "snapshots": 3,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.81,
+  "daemon_rss_mb": 430,
+  "agent_tokens": 42539,
+  "commands": [
+    "navigate http://127.0.0.1:8790/",
+    "snapshot",
+    "batch [\n{\"cmd\":\"fill\",\"ref\":\"@e1\",\"text\":\"ops-admin\"},\n{\"cmd\":\"fill\",\"ref\":\"@e2\"",
+    "snapshot",
+    "",
+    "type @e1 ops-admin",
+    "type @e2 correct-horse",
+    "click @e3 -s",
+    "text"
+  ]
+}

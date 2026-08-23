@@ -1,0 +1,13 @@
+#!/bin/bash
+# Shim: logs every CLI call (args, duration, stdout bytes) for the agent benchmark, then runs the real CLI.
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+LOG="${AGENTBENCH_LOG:-$ROOT/scratch/agentbench/results/calls.log}"
+start=$(python3 -c 'import time;print(time.time())')
+out=$(PYTHONPATH="$ROOT" "$ROOT/.venv/bin/python" -m cli.main "$@" 2>/tmp/agentbench.err); rc=$?
+end=$(python3 -c 'import time;print(time.time())')
+python3 - "$LOG" "$start" "$end" "$rc" "${#out}" "$@" <<'PY'
+import json,sys
+log,start,end,rc,n,*args=sys.argv[1:]
+open(log,'a').write(json.dumps({"t":float(start),"dur":float(end)-float(start),"rc":int(rc),"out_chars":int(n),"args":args})+"\n")
+PY
+printf '%s\n' "$out"; cat /tmp/agentbench.err >&2; exit $rc

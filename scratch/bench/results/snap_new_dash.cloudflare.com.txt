@@ -1,0 +1,23 @@
+url: https://dash.cloudflare.com/login
+title: Cloudflare Dashboard | Manage Your Account
+@e1 button "English" [expanded=false]
+@e2 link "Sign up" href="/sign-up"
+h1 "Sign in to Cloudflare"
+@e3 button "Continue with Google"
+@e4 button "Continue with Apple"
+@e5 button "Continue with GitHub"
+@e6 button "Continue with SSO"
+@e7 textbox "Email"
+@e8 textbox "Password" type="password"
+@e9 button "Show"
+@e10 checkbox "Save email and login method on this device"
+@e11 button "Sign in" [disabled]
+@e12 link "Sign up" href="/sign-up"
+@e13 link "email" href="/forgot-email"
+@e14 link "password" href="/forgot-password"
+@e15 link "terms" href="https://www.cloudflare.com/subscriptionagreement/"
+@e16 link "privacy policy" href="https://www.cloudflare.com/privacypolicy/"
+@e17 link "cookie policy" href="https://www.cloudflare.com/cookie-policy/"
+h2 "Where the Internet’s builders connect."
+@e18 link "Register now" href="https://www.cloudflare.com/connect/"
+@e19 button "Cookie Preferences"

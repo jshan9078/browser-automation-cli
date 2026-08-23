@@ -1,0 +1,30 @@
+{
+  "task": "t3_settings",
+  "run": "sonnet",
+  "success": true,
+  "answer": null,
+  "wall_s": 27.57,
+  "wall_total_s": 54.3,
+  "cli_calls": 11,
+  "failed_calls": 0,
+  "cli_time_s": 0.66,
+  "tool_output_tokens": 1153,
+  "snapshots": 6,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.69,
+  "daemon_rss_mb": 454,
+  "agent_tokens": 44574,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e7\", \"snap\": true}",
+    "click {\"selector\": \"@e29\"}",
+    "select_option {\"selector\": \"@e28\", \"value\": \"Europe/Berlin\"}",
+    "snapshot",
+    "click {\"selector\": \"@e31\", \"snap\": true}"
+  ]
+}

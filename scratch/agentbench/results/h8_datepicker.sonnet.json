@@ -1,0 +1,33 @@
+{
+  "task": "h8_datepicker",
+  "run": "sonnet",
+  "success": true,
+  "answer": null,
+  "wall_s": 33.29,
+  "wall_total_s": 62.4,
+  "cli_calls": 13,
+  "failed_calls": 2,
+  "cli_time_s": 1.48,
+  "tool_output_tokens": 2358,
+  "snapshots": 9,
+  "screenshots": 1,
+  "daemon_cpu_s": 0.59,
+  "daemon_rss_mb": 448,
+  "agent_tokens": 49199,
+  "commands": [
+    "snapshot",
+    "-s batch [{\"type\":\"fill\",\"ref\":\"e1\",\"text\":\"ops-admin\"},{\"type\":\"fill\",\"ref\":\"e2",
+    "type @e1 ops-admin",
+    "type @e2 correct-horse",
+    "click @e3 -s",
+    "click @e12 -s",
+    "click @e28",
+    "click @e28 -s",
+    "snapshot",
+    "click @e62 -s",
+    "click @e109 -s",
+    "screenshot -o /Users/jonathan/Desktop/browser-cli/scratch/agentbench/results/bef",
+    "click @e161 -s"
+  ],
+  "note": "metrics recovered from /tmp/agentbench.log (agent did not export AGENTBENCH_LOG)"
+}

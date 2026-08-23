@@ -1,0 +1,92 @@
+{
+  "label": "opt3_headless",
+  "startup_s": 0.9442735000047833,
+  "steps": {
+    "create": {
+      "median_s": 0.14806283300276846,
+      "bytes": 9,
+      "tokens": 2
+    },
+    "navigate_spa": {
+      "median_s": 0.056623916956596076,
+      "bytes": 120,
+      "tokens": 30,
+      "ok": true
+    },
+    "snapshot": {
+      "median_s": 0.04922045802231878,
+      "bytes": 24803,
+      "tokens": 6201,
+      "target_visible": false,
+      "hidden_consent_leaked": false
+    },
+    "click_ambiguous": {
+      "median_s": 0.08322820800822228,
+      "bytes": 101,
+      "tokens": 25
+    },
+    "type": {
+      "median_s": 0.043472562509123236,
+      "bytes": 22.0,
+      "tokens": 6.0
+    },
+    "press": {
+      "median_s": 0.042124625062569976,
+      "bytes": 22,
+      "tokens": 6
+    },
+    "click_exact": {
+      "median_s": 0.07350666599813849,
+      "bytes": 101,
+      "tokens": 25
+    },
+    "snapshot_scoped": {
+      "median_s": 0.04189495800528675,
+      "bytes": 434,
+      "tokens": 108
+    },
+    "navigate_static": {
+      "median_s": 0.045390708022750914,
+      "bytes": 109,
+      "tokens": 27
+    },
+    "back": {
+      "median_s": 0.04634795803576708,
+      "bytes": 101,
+      "tokens": 25
+    },
+    "screenshot": {
+      "median_s": 0.05106287507805973,
+      "bytes": 94,
+      "tokens": 24,
+      "file_kb": 65.8994140625
+    },
+    "list": {
+      "median_s": 0.03907149995211512,
+      "bytes": 251,
+      "tokens": 63
+    }
+  },
+  "correct": {
+    "ambiguous_click_hit_create": [
+      false,
+      false,
+      false
+    ],
+    "form_flow": [
+      true,
+      true,
+      true
+    ]
+  },
+  "iters": 3,
+  "python_floor_s": 0.02520062495023012,
+  "idle": {
+    "cpu_pct": 8.000000000000002,
+    "gpu_pct": 0.0,
+    "rss_mb": 470.890625,
+    "procs": 6
+  },
+  "total_task_s": 0.7200072686537169,
+  "total_task_tokens": 6542.0
+}

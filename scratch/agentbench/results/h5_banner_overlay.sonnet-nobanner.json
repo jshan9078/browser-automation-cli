@@ -1,0 +1,30 @@
+{
+  "task": "h5_banner_overlay",
+  "run": "sonnet",
+  "success": true,
+  "answer": null,
+  "wall_s": 24.22,
+  "wall_total_s": 47.0,
+  "cli_calls": 11,
+  "failed_calls": 0,
+  "cli_time_s": 1.37,
+  "tool_output_tokens": 2272,
+  "snapshots": 5,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.62,
+  "daemon_rss_mb": 447,
+  "agent_tokens": 45765,
+  "commands": [
+    "",
+    "navigate http://127.0.0.1:8790/ -s",
+    "type @e1 ops-admin",
+    "type @e2 correct-horse",
+    "click @e3 -s",
+    "click @e13 -s",
+    "eval document.querySelector('input[value=\"ap@acme-internal.test\"]') ? 'found' : ",
+    "click @e27",
+    "press Control+a @e27",
+    "type @e27 finance@acme-internal.test -s",
+    "click @e29 -s"
+  ]
+}

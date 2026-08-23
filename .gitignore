@@ -26,3 +26,5 @@ RELEASE.md
 # Local state
 *.log
 *.tmp
+scratch/agentbench/results/calls.log
+scratch/agentbench/results/current.json

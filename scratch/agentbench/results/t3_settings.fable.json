@@ -1,0 +1,31 @@
+{
+  "task": "t3_settings",
+  "run": "fable",
+  "success": true,
+  "answer": null,
+  "wall_s": 60.7,
+  "wall_total_s": 92.2,
+  "cli_calls": 12,
+  "failed_calls": 2,
+  "cli_time_s": 31.43,
+  "tool_output_tokens": 1038,
+  "snapshots": 5,
+  "screenshots": 0,
+  "daemon_cpu_s": 1.17,
+  "daemon_rss_mb": 434,
+  "agent_tokens": 38453,
+  "commands": [
+    "goto http://127.0.0.1:8790/ -s",
+    "navigate http://127.0.0.1:8790/ -s",
+    "batch",
+    "type @e1 ops-admin",
+    "type @e2 correct-horse",
+    "click @e3 -s",
+    "click @e7 -s",
+    "click @e29",
+    "select @e28 Europe/Berlin",
+    "snapshot",
+    "click @e31",
+    "text"
+  ]
+}

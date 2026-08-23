@@ -1,0 +1,29 @@
+{
+  "task": "t2_archive_project",
+  "run": "fable",
+  "success": true,
+  "answer": null,
+  "wall_s": 67.45,
+  "wall_total_s": 100.9,
+  "cli_calls": 10,
+  "failed_calls": 2,
+  "cli_time_s": 31.31,
+  "tool_output_tokens": 1557,
+  "snapshots": 8,
+  "screenshots": 0,
+  "daemon_cpu_s": 1.2,
+  "daemon_rss_mb": 444,
+  "agent_tokens": 39091,
+  "commands": [
+    "goto http://127.0.0.1:8790/ -s",
+    "navigate http://127.0.0.1:8790/ -s",
+    "batch -s",
+    "type @e1 ops-admin",
+    "type @e2 correct-horse",
+    "click @e3 -s",
+    "click @e6 -s",
+    "click @e47 -s",
+    "click @e61 -s",
+    "click @e67 -s"
+  ]
+}

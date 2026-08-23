@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Bench Dashboard</title>
+<style>
+ body{margin:0;font-family:system-ui} .app{display:flex} .side{width:240px;background:#f3f4f6;height:100vh;overflow:auto}
+ .main{flex:1;padding:24px} .spin{width:40px;height:40px;border:4px solid #ddd;border-top-color:#f60;border-radius:50%;animation:r 1s linear infinite}
+ @keyframes r{to{transform:rotate(360deg)}} .hidden{display:none} .w{display:block}
+ .card{border:1px solid #ddd;padding:12px;margin:8px 0} label{display:block;margin:8px 0 4px}
+ .group.flex{display:inline-flex;padding:6px 12px;margin:4px}
+</style></head><body>
+<div id="react-app"><div class="c_a"><div class="c_b"><div class="c_c"><div class="app">
+<nav class="side" id="sidebar"></nav>
+<div class="main">
+ <div class="spin" aria-hidden="true"></div>
+ <h1>Turnstile</h1>
+ <div class="toolbar"><button class="group flex" id="ask-ai">Ask AI</button><button class="group flex" id="help">Help</button></div>
+ <div class="card" id="content"></div>
+ <div id="consent" class="hidden"><input type="checkbox" name="c1"><input type="checkbox" name="c2"><input type="checkbox" name="c3"><input type="checkbox" name="c4"><input type="checkbox" name="c5"><input type="checkbox" name="c6"><input type="checkbox" name="c7"><input type="checkbox" name="c8"><input type="checkbox" name="c9"><input type="checkbox" name="c10"><button>Accept</button><button>Reject</button></div>
+ <div id="status" aria-live="polite"></div>
+</div></div></div></div></div></div>
+<script>
+ // sidebar: 40 links each wrapped 5 deep (~250 nodes before main content)
+ const nav=document.getElementById('sidebar');
+ for(let i=0;i<40;i++){let d=document.createElement('div');d.className='w';let cur=d;for(let k=0;k<4;k++){const n=document.createElement('div');n.className='w w'+k;cur.appendChild(n);cur=n;}
+   const a=document.createElement('a');a.href='#/section/'+i;a.className='group flex';a.textContent='Section '+i;cur.appendChild(a);nav.appendChild(d);}
+ // 30 filler cards
+ const content=document.getElementById('content');
+ for(let i=0;i<30;i++){const c=document.createElement('div');c.className='card';c.innerHTML='<h3>Widget '+i+'</h3><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.</p><span class="group flex">site'+i+'.example</span>';content.appendChild(c);}
+ const form=document.createElement('form');form.id='create-form';form.innerHTML=
+  '<label for="wname">Widget name</label><input id="wname" type="text" placeholder="e.g. my-site">'+
+  '<label for="host">Hostname</label><input id="host" type="text" role="combobox" aria-label="Hostname">'+
+  '<label for="mode">Widget mode</label><select id="mode"><option value="managed">Managed</option><option value="nonint">Non-interactive</option></select>'+
+  '<button type="button" class="group flex" id="create-btn">Create</button>';
+ content.appendChild(form);
+ document.getElementById('create-btn').addEventListener('click',()=>{const n=document.getElementById('wname').value;document.getElementById('status').textContent='Created widget '+n;});
+ document.getElementById('ask-ai').addEventListener('click',()=>{document.getElementById('status').textContent='AI panel opened (WRONG BUTTON)';});
+ document.getElementById('host').addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElementById('status').textContent='host set '+e.target.value;}});
+ // long-poll to defeat networkidle
+ (async function poll(){while(true){try{await fetch('/poll?'+Date.now());}catch(e){}}})();
+</script></body></html>
