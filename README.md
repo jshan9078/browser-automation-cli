@@ -213,3 +213,8 @@ Wheel (same PyPI project name, so download stats carry over): `cd rust && uvx ma
 `uv tool install rust/target/wheels/browser_automation_cli-*.whl`. Publishing the Rust build to PyPI is
 planned for 0.4.0 once Linux/Windows wheels are built in CI; until then the PyPI package is the Python
 implementation and the Rust wheel is attached to the GitHub release.
+
+CI (`.github/workflows/rust-wheels.yml`) builds wheels for Linux x86_64/aarch64 and macOS arm64/x86_64 on every
+push touching `rust/`, runs the end-to-end suite against the Rust daemon on Linux, attaches wheels to the release
+on `v*` tags, and publishes to PyPI when a `PYPI_API_TOKEN` repository secret exists. Windows is not a target: the
+daemon speaks over a Unix socket.

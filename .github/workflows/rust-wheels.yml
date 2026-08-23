@@ -1,0 +1,94 @@
+name: rust-wheels
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths: ["rust/**", "tests/**", "scratch/bench/site/**", ".github/workflows/rust-wheels.yml"]
+  pull_request:
+    paths: ["rust/**", "tests/**", ".github/workflows/rust-wheels.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Linux validation: the Python end-to-end suite driven against the Rust daemon + Rust client.
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust }
+      - uses: astral-sh/setup-uv@v4
+      - name: Build
+        run: cd rust && cargo build --release
+      - name: Python deps + Chromium (Playwright's cached build is what the Rust daemon looks for)
+        run: |
+          uv sync
+          uv run playwright install --with-deps chromium
+      - name: End-to-end tests on the Rust daemon
+        env:
+          BROWSER_CLI: ${{ github.workspace }}/rust/target/release/browser
+          BROWSER_DAEMON: ${{ github.workspace }}/rust/target/release/browser-daemon
+          PYTHONPATH: ${{ github.workspace }}
+        run: uv run python -m unittest -v tests/test_cli.py
+      - name: Daemon log on failure
+        if: failure()
+        run: cat /tmp/test-daemon.log || true
+
+  wheels:
+    needs: test-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64, manylinux: auto }
+          - { os: ubuntu-latest, target: aarch64, manylinux: auto }
+          - { os: macos-14, target: aarch64 }
+          - { os: macos-13, target: x86_64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: rust
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux || '' }}
+          args: --release --out dist
+      - name: Smoke the client binary (native targets only)
+        if: matrix.target == 'x86_64' || runner.arch == 'ARM64'
+        run: rust/target/release/browser --version || rust/target/${{ matrix.target }}*/release/browser --version || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.os }}-${{ matrix.target }}
+          path: rust/dist/*.whl
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with: { working-directory: rust, command: sdist, args: --out dist }
+      - uses: actions/upload-artifact@v4
+        with: { name: sdist, path: rust/dist/*.tar.gz }
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Attach wheels to the GitHub release
+        env: { GH_TOKEN: ${{ github.token }} }
+        run: gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
+      - name: Publish to PyPI (only when PYPI_API_TOKEN is set; same project name as the Python package)
+        if: env.TOKEN != ''
+        env:
+          TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          pip install uv
+          uv publish dist/*
