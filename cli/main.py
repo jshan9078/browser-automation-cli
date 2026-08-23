@@ -16,6 +16,7 @@ Standalone (no daemon):
   browser capture <url> [-f] [-o path]   Headless screenshot (viewport; -f full page)
   browser install                        Install Chromium runtime
   browser cleanup                        Kill Chromium processes started by this tool
+  browser --version | update             Show version / upgrade to the latest release (checked daily; BROWSER_NO_UPDATE_CHECK=1 disables)
 
 Daemon (start with: browser-daemon):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -324,12 +325,46 @@ async def _main(args: list[str]):
         sys.exit(2)
 
 
+def _update_notice():
+    try:
+        from daemon import update
+        n = update.notice()
+        if n:
+            print(n, file=sys.stderr)
+    except Exception:
+        pass
+
+
 def main():
     args = sys.argv[1:]
     if not args or args[0] in ("-h", "--help"):
         print(HELP)
+        _update_notice()
         return
-    asyncio.run(_main(args))
+    if args[0] in ("--version", "-V", "version"):
+        from daemon import update
+        c = update.read_cache()
+        print(json.dumps({"version": update.current_version(), "latest": c.get("latest"), "checked_at": c.get("checked_at")}))
+        _update_notice()
+        return
+    if args[0] == "update":
+        from daemon import update
+        info = update.check_now()
+        if info.get("error"):
+            print(f"Could not reach PyPI: {info['error']}", file=sys.stderr); sys.exit(1)
+        if update.is_newer(info["latest"], info["current"]):
+            print(f"{info['latest']} available (you have {info['current']}). Upgrading with: uv tool upgrade {update.PACKAGE}")
+            r = subprocess.run(["uv", "tool", "upgrade", update.PACKAGE])
+            if r.returncode != 0:
+                print("Upgrade failed; run it manually: uv tool upgrade browser-automation-cli", file=sys.stderr); sys.exit(r.returncode)
+            print("Restart the daemon to use the new version: browser shutdown && browser-daemon &")
+        else:
+            print(f"Up to date ({info['current']}).")
+        return
+    try:
+        asyncio.run(_main(args))
+    finally:
+        _update_notice()
 
 
 if __name__ == "__main__":

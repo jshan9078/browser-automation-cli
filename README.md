@@ -102,6 +102,7 @@ browser cleanup                            # kill Chromium processes launched fr
 | `browser <id> show` / `hide` | Move the session to a visible window / back to headless (auth kept) |
 | `browser <id> delete` | Close session and forget its cookies |
 | `browser shutdown` | Stop the daemon gracefully |
+| `browser --version` / `browser update` | Show version; upgrade to the latest PyPI release. The daemon checks PyPI once a day and the CLI prints a one-line hint on stderr when a newer version exists (`BROWSER_NO_UPDATE_CHECK=1` disables) |
 
 ### Page commands
 

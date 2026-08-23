@@ -275,12 +275,26 @@ fn shell_words(s: &str) -> Vec<String> {
     out
 }
 
+/// One-line stderr hint when ~/.browser-daemon/update.json (written daily by the daemon) shows a newer release.
+fn update_notice() {
+    if std::env::var("BROWSER_NO_UPDATE_CHECK").is_ok() { return; }
+    let p = socket_path().with_file_name("update.json");
+    let Ok(txt) = std::fs::read_to_string(&p) else { return };
+    let Ok(v) = serde_json::from_str::<Value>(&txt) else { return };
+    let (Some(latest), Some(current)) = (v["latest"].as_str(), v["current"].as_str()) else { return };
+    let key = |s: &str| s.split('.').map(|x| x.parse::<u64>().unwrap_or(0)).collect::<Vec<_>>();
+    if key(latest) > key(current) {
+        eprintln!("browser-automation-cli {latest} is available (you have {current}): uv tool upgrade browser-automation-cli  (BROWSER_NO_UPDATE_CHECK=1 to silence)");
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.is_empty() || args[0] == "-h" || args[0] == "--help" { print!("{HELP}"); return; }
+    if args.is_empty() || args[0] == "-h" || args[0] == "--help" { print!("{HELP}"); update_notice(); return; }
+    if args[0] == "--version" || args[0] == "-V" || args[0] == "version" { println!("{}", json!({"version": env!("CARGO_PKG_VERSION"), "client": "rust"})); update_notice(); return; }
     let cmd = args[0].as_str();
     let code = match cmd {
-        "capture" | "install" | "cleanup" => python_fallback(&args),
+        "capture" | "install" | "cleanup" | "update" => python_fallback(&args),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));
             let r = send_request(&json!({"action": "create", "params": {"visible": visible}}));
@@ -318,5 +332,6 @@ fn main() {
         }
         _ => { eprint!("{HELP}"); 2 }
     };
+    update_notice();
     exit(code);
 }

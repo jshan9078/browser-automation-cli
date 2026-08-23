@@ -1,0 +1,28 @@
+{
+  "task": "t4_rename",
+  "run": "rust",
+  "success": true,
+  "answer": null,
+  "wall_s": 20.2,
+  "wall_total_s": 46.0,
+  "cli_calls": 9,
+  "failed_calls": 0,
+  "cli_time_s": 0.47,
+  "tool_output_tokens": 1288,
+  "snapshots": 5,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.46,
+  "daemon_rss_mb": 377,
+  "agent_tokens": 43667,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e6\", \"snap\": true}",
+    "click {\"selector\": \"@e30\", \"snap\": true}",
+    "type {\"selector\": \"@e48\", \"text_value\": \"Atlas v2\"}",
+    "click {\"selector\": \"@e49\", \"snap\": true}"
+  ]
+}

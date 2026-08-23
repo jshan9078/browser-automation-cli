@@ -74,22 +74,36 @@ Baseline note: v0.2.1 cannot run this suite as-is (its snapshot omits the form a
 `button.group.flex` click hits the wrong button — see OPTIMIZATION.md), so there is no older
 agent-level row; this table is the baseline for future rewrites.
 
-### Rust daemon (v0.4.0-alpha), same tasks, same model
+### Rust daemon (v0.4.0-alpha), all 17 tasks, same Sonnet subagents
 
-| task | Python calls / wall / failed | Rust calls / wall / failed |
+| task | Python calls / wall / failed / tool tok | Rust calls / wall / failed / tool tok |
 |---|---|---|
-| h2 iframe ticket | 438 / 331 s / 21 | **9 / 12 s / 0** |
-| h3 shadow DOM flags | 18 / 63 s / 1 | **8 / 19 s / 0** |
-| h4 delayed + paginated audit | 20 / 41 s / 5 | 13 / 35 s / 0 |
-| h5 banner overlay | 22 / 54 s / 6 | 12 / 46 s / 2 |
-| h7 keyboard reorder | 15 / 34 s / 2 | 14 / 33 s / 2 |
-| t1 create project | 19 / 46 s / 4 | 16 / 48 s / 0 |
-| h1 canvas chart | 16 / 28 s / 5 | 46 / 131 s / 5 ¹ |
+| t1_create_project | 19 / 46 s / 4 / 2,283 | 16 / 47 s / 0 / 2,352 |
+| t2_archive_project | 20 / 36 s / 5 / 1,208 | 15 / 29 s / 0 / 1,338 |
+| t3_settings | 11 / 28 s / 0 / 1,153 | 10 / 22 s / 0 / 1,134 |
+| t4_rename | 12 / 20 s / 2 / 1,150 | 9 / 20 s / 0 / 1,288 |
+| t5_extract_count | 17 / 35 s / 0 / 2,208 | 17 / 60 s / 3 / 2,285 |
+| t6_extract_account | 9 / 16 s / 0 / 955 | 8 / 35 s / 0 / 440 |
+| t7_live_wikipedia | 3 / 8 s / 1 / 141 | 2 / 4 s / 0 / 47 |
+| h1_canvas_chart | 16 / 28 s / 5 / 644 | 9 / 26 s / 0 / 687 |
+| h2_iframe_ticket | 438 / 331 s / 21 / 11,151 | 9 / 12 s / 0 / 801 |
+| h3_shadow_flags | 18 / 63 s / 1 / 1,314 | 8 / 19 s / 0 / 923 |
+| h4_audit_delayed | 20 / 41 s / 5 / 726 | 13 / 35 s / 0 / 1,980 |
+| h5_banner_overlay | 22 / 54 s / 6 / 2,751 | 12 / 46 s / 2 / 2,526 |
+| h6_infinite_scroll | 26 / 28 s / 2 / 1,040 | 47 / 23 s / 0 / 932 |
+| h7_reorder | 15 / 34 s / 2 / 1,236 | 14 / 33 s / 2 / 2,411 |
+| h8_datepicker | 13 / 33 s / 2 / 2,358 | 18 / 33 s / 1 / 2,271 |
+| h9_reauth_export | 17 / 32 s / 4 / 1,077 | 13 / 32 s / 0 / 1,151 |
+| h10_validation | 17 / 63 s / 2 / 1,534 | 11 / 26 s / 0 / 1,195 |
 
-¹ Contaminated run: the agent invoked the stale globally-installed `browser` 0.2.1 instead of the shim,
-whose `type` payload the new daemon misread as a text-target; it then typed key-by-key. The daemon now
-accepts the legacy payload and the global install was updated; the row is kept as a reminder that the
-harness must count daemon-side and that old clients exist.
+Totals over 17 tasks — calls 693 → 231, failed calls 62 → 8, tool-output tokens 32,929 → 23,761; 17/17 pass on both. Screenshots were used in h1 only (1 each, headless — `Page.captureScreenshot` renders
+off-screen, so headless does not prevent screenshot-based tasks). h6 on Rust is 47 calls because the
+agent polled with `eval` 37 times while scrolling — not a daemon cost (1.4 s CLI time total). A first
+h1 Rust run (46 calls) is kept as `h1_canvas_chart.rust-contaminated.json`: the agent invoked the stale
+global `browser` 0.2.1 whose `type` payload the new daemon misread; the daemon now accepts the legacy
+payload and the global install was updated.
+
+Headed data point (`BENCH_VISIBLE=1`, a visible window): h1 canvas chart PASS, 30 calls, 126 s, 1 screenshot, daemon RSS 1380 MB. The extra calls were login retries: typed text was dropped because a non-frontmost window has no document focus — fixed afterwards with `Emulation.setFocusEmulationEnabled` (tests pass; the headed task has not been re-run since).
 
 ## What the runs revealed
 

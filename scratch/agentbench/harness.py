@@ -94,9 +94,10 @@ def setup(task):
     urllib.request.urlopen(urllib.request.Request(f"{BASE}/__reset", data=b"{}", method="POST"))
     for s in json.loads(subprocess.run([*CLI, "list"], capture_output=True, text=True, env=ENV).stdout):
         subprocess.run([*CLI, s["session_id"], "delete"], capture_output=True, env=ENV)
-    sid = subprocess.run([*CLI, "create"], capture_output=True, text=True, env=ENV).stdout.strip()
+    create = [*CLI, "create"] + (["--show"] if os.environ.get("BENCH_VISIBLE") else [])  # BENCH_VISIBLE=1: headed window
+    sid = subprocess.run(create, capture_output=True, text=True, env=ENV).stdout.strip()
     LOG.write_text("")
-    META.write_text(json.dumps({"task": task, "sid": sid, "t0": time.time(), "cpu0": tree_cpu(daemon_pid())}))
+    META.write_text(json.dumps({"task": task, "sid": sid, "t0": time.time(), "cpu0": tree_cpu(daemon_pid()), "visible": bool(os.environ.get("BENCH_VISIBLE"))}))
     print(AGENT_RULES.format(sid=sid) + "\n\nTASK: " + TASKS[task]["prompt"] + f"\n\nSet the environment variable AGENTBENCH_LOG={LOG} and use the `browser` binary at {HERE}/bin/browser (e.g. `export PATH={HERE}/bin:$PATH`).")
 
 def verify(task, answer=None, agent_tokens=None, run=None):
@@ -114,7 +115,7 @@ def verify(task, answer=None, agent_tokens=None, run=None):
     except Exception as e: ok = False
     # CPU: sum over pids present at both samples (+ full time of pids that appeared)
     used = sum(cpu1["pids"][p] - meta["cpu0"]["pids"].get(p, 0.0) for p in cpu1["pids"])
-    r = {"task": task, "run": run or time.strftime("%H%M%S"), "success": ok, "answer": answer,
+    r = {"task": task, "run": run or time.strftime("%H%M%S"), "success": ok, "answer": answer, "visible": meta.get("visible", False),
          "wall_s": round((calls[-1]["t"] + calls[-1]["dur"] - calls[0]["t"]) if calls else 0, 2),
          "wall_total_s": round(t1 - meta["t0"], 1),
          "cli_calls": len(calls), "failed_calls": sum(c["rc"] != 0 for c in calls),

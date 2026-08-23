@@ -135,6 +135,8 @@ impl Manager {
         page.send("Network.setUserAgentOverride", json!({"userAgent": ua})).await?;
         page.send("Emulation.setDeviceMetricsOverride", json!({"width": VIEWPORT.0, "height": VIEWPORT.1, "deviceScaleFactor": 1, "mobile": false})).await?;
         page.send("Page.addScriptToEvaluateOnNewDocument", json!({"source": js::STEALTH})).await?;
+        // a headed window that is not frontmost has no document focus, so insertText/key events are dropped
+        let _ = page.send("Emulation.setFocusEmulationEnabled", json!({"enabled": true})).await;
         if let Some(st) = &saved_state {
             if !st.cookies.is_empty() { let _ = cdp.send(None, "Storage.setCookies", json!({"cookies": st.cookies, "browserContextId": context_id})).await; }
             if !st.local_storage.is_empty() {

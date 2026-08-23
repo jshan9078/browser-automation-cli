@@ -134,9 +134,8 @@ resolve through the same role/name code the snapshot uses (strict mode, actionab
 | binaries | Python + Playwright + Node driver | 0.5 MB + 1.0 MB | Chromium still ~170 MB |
 | daemon start-up | 0.73 s | 0.41 s | |
 
-Agent benchmark (same tasks, same Sonnet subagents, see AGENTBENCH.md): iframe ticket 438 → 9 calls
-(331 s → 12 s), shadow-DOM flags 18 → 8, delayed audit 20 → 13 (5 → 0 failed calls), wizard 19 → 16
-(4 → 0 failed). Two things got worse and are logged honestly: a click that is covered by an overlay
+Agent benchmark, all 17 tasks (same Sonnet subagents, see AGENTBENCH.md): Totals over 17 tasks — calls 693 → 231, failed calls 62 → 8, tool-output tokens 32,929 → 23,761; 17/17 pass on both. Iframe ticket
+438 → 9 calls (331 s → 12 s), shadow-DOM flags 18 → 8. Two things got worse and are logged honestly: a click that is covered by an overlay
 now waits the full 10 s action timeout before reporting "covered by …" (Python failed after ~1 s via
 Playwright's own retry), and `press`/`type --sequential` synthesize key events from a small key table
 rather than Playwright's full keyboard layout.

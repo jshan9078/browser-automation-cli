@@ -12,6 +12,7 @@ from playwright.async_api import Browser, async_playwright
 
 from .browser import ACTIONS
 from .session import SessionManager
+from . import update
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ class Daemon:
         if SOCKET_PATH.exists():
             SOCKET_PATH.unlink()
 
+        update.start_background_checks()
         self.playwright = await async_playwright().start()
         # warm the headless browser so the first `create` is fast
         await self.get_browser(False)

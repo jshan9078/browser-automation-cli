@@ -1,0 +1,21 @@
+{
+  "task": "t7_live_wikipedia",
+  "run": "rust",
+  "success": true,
+  "answer": "TypeScript",
+  "wall_s": 3.95,
+  "wall_total_s": 39.5,
+  "cli_calls": 2,
+  "failed_calls": 0,
+  "cli_time_s": 0.54,
+  "tool_output_tokens": 47,
+  "snapshots": 0,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.32,
+  "daemon_rss_mb": 427,
+  "agent_tokens": 42023,
+  "commands": [
+    "navigate {\"url\": \"https://en.wikipedia.org/wiki/Playwright_(software)",
+    "eval {\"expression\": \"Array.from(document.querySelectorAll('.infob"
+  ]
+}
