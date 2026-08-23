@@ -1,8 +1,8 @@
 [package]
 name = "browser-cli"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
-description = "Browser automation daemon + CLI for coding agents (Rust)"
+description = "Browser automation daemon + CLI for coding agents. Persistent sessions, no MCP, no extensions."
 license = "MIT"
 
 [lib]

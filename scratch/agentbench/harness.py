@@ -138,7 +138,7 @@ def passk():
     """pass@k per implementation: attempts are runs labelled <impl> and <impl>-N."""
     import statistics as st
     rows = [json.loads(f.read_text()) for f in sorted(RES.glob("[th]*.json")) if "contaminated" not in f.name and "headed" not in f.name]
-    impls = {"python (sonnet)": "sonnet", "rust": "rust"}
+    impls = {"python (sonnet)": "sonnet", "rust (sonnet)": "rust", "rust 0.4.0 pypi (haiku)": "haiku"}
     print(f"{'impl':16s} {'tasks':>5s} {'attempts':>8s} {'pass@1':>7s} {'pass@2':>7s} {'med calls':>9s} {'med fail':>8s} {'med wall':>8s} {'med cli s':>9s} {'med tool tok':>12s} {'med agent tok':>13s} {'med cpu s':>9s} {'med rss':>7s}")
     for name, prefix in impls.items():
         att = [r for r in rows if r["run"] == prefix or r["run"].startswith(prefix + "-")]
@@ -151,11 +151,11 @@ def passk():
     print("\nper task (calls / wall s / failed) attempt1 | attempt2:")
     for t in sorted({r["task"] for r in rows}, key=lambda x: (x[0] != 't', int(''.join(c for c in x.split('_')[0] if c.isdigit())))):
         cells = []
-        for prefix in ("sonnet", "rust"):
+        for prefix in ("sonnet", "rust", "haiku"):
             a = [r for r in rows if r["task"] == t and (r["run"] == prefix or r["run"].startswith(prefix + "-"))]
             a.sort(key=lambda r: r["run"])
             cells.append(" | ".join(f"{'P' if r['success'] else 'F'} {r['cli_calls']}/{r['wall_s']:.0f}/{r['failed_calls']}" for r in a))
-        print(f"  {t:22s} python: {cells[0]:28s} rust: {cells[1]}")
+        print(f"  {t:22s} python: {cells[0]:28s} rust: {cells[1]:28s} haiku: {cells[2]}")
 
 if __name__ == "__main__":
     cmd = sys.argv[1]

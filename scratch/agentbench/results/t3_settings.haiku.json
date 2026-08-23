@@ -1,0 +1,30 @@
+{
+  "task": "t3_settings",
+  "run": "haiku",
+  "success": true,
+  "answer": "Task completed successfully. Enabled Weekly digest email checkbox, set Timezone to Europe/Berlin, saved.",
+  "visible": false,
+  "wall_s": 36.87,
+  "wall_total_s": 54.6,
+  "cli_calls": 10,
+  "failed_calls": 0,
+  "cli_time_s": 0.55,
+  "tool_output_tokens": 1319,
+  "snapshots": 7,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.52,
+  "daemon_rss_mb": 368,
+  "agent_tokens": 33764,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e7\", \"snap\": true}",
+    "click {\"selector\": \"@e29\", \"snap\": true}",
+    "select_option {\"selector\": \"@e28\", \"snap\": true, \"value\": \"Europe/Berlin\"}",
+    "click {\"selector\": \"@e31\", \"snap\": true}"
+  ]
+}
