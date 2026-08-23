@@ -48,7 +48,7 @@ jobs:
           - { os: ubuntu-latest, target: x86_64, manylinux: auto }
           - { os: ubuntu-latest, target: aarch64, manylinux: auto }
           - { os: macos-14, target: aarch64 }
-          - { os: macos-13, target: x86_64 }
+          - { os: macos-15-intel, target: x86_64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -58,9 +58,12 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux || '' }}
           args: --release --out dist
-      - name: Smoke the client binary (native targets only)
-        if: matrix.target == 'x86_64' || runner.arch == 'ARM64'
-        run: rust/target/release/browser --version || rust/target/${{ matrix.target }}*/release/browser --version || true
+      - name: Smoke the client binary (native builds only)
+        if: (matrix.os != 'ubuntu-latest' || matrix.target == 'x86_64')
+        run: |
+          set -e
+          pip install rust/dist/*.whl
+          browser --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.os }}-${{ matrix.target }}
@@ -93,10 +96,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
-      - name: Publish to PyPI (only when PYPI_API_TOKEN is set; same project name as the Python package)
-        if: ${{ secrets.PYPI_API_TOKEN != '' }}
+      - name: Publish to PyPI (only when the PYPI_API_TOKEN secret is set; same project name as the Python package)
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          if [ -z "$UV_PUBLISH_TOKEN" ]; then echo "PYPI_API_TOKEN not set; skipping PyPI publish"; exit 0; fi
           pip install uv
           uv publish dist/*
