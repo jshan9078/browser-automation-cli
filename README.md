@@ -208,3 +208,8 @@ curl -fsSL https://raw.githubusercontent.com/jshan9078/browser-automation-cli/ma
 ```
 
 Installs `browser` and `browser-daemon` into `~/.local/bin` (set `BROWSER_CLI_BIN` to change). Other platforms: `cd rust && cargo build --release`.
+
+Wheel (same PyPI project name, so download stats carry over): `cd rust && uvx maturin build --release` →
+`uv tool install rust/target/wheels/browser_automation_cli-*.whl`. Publishing the Rust build to PyPI is
+planned for 0.4.0 once Linux/Windows wheels are built in CI; until then the PyPI package is the Python
+implementation and the Rust wheel is attached to the GitHub release.
