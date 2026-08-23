@@ -11,8 +11,9 @@ const HELP: &str = r##"browser — authenticated browser automation for coding a
 
 Standalone (no daemon):
   browser capture <url> [-f] [-o path]   Headless screenshot (viewport; -f full page)
-  browser install                        Install Chromium runtime
+  browser install [--headless-only]      Download Chromium (Chrome for Testing, same build Playwright pins)
   browser cleanup                        Kill Chromium processes started by this tool
+  browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
 
 Daemon (start with: browser-daemon):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -224,6 +225,22 @@ fn output(mut result: Value) -> i32 {
     if ok { 0 } else { 1 }
 }
 
+/// Kill Chromium processes launched from Playwright's cache (ours), nothing else.
+fn cleanup() -> i32 {
+    let out = Command::new("ps").args(["-Ao", "pid,command"]).output().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default();
+    let mut n = 0;
+    for line in out.lines().skip(1) {
+        let line = line.trim_start();
+        let (pid, cmd) = match line.split_once(' ') { Some(x) => x, None => continue };
+        if cmd.contains("ms-playwright") && cmd.to_lowercase().contains("chrom") {
+            if let Ok(p) = pid.parse::<i32>() { if Command::new("kill").arg(p.to_string()).status().map(|s| s.success()).unwrap_or(false) { n += 1; } }
+        }
+    }
+    println!("{}", if n > 0 { format!("Killed {n} Chromium process(es)") } else { "No Playwright Chromium processes found".into() });
+    0
+}
+
+#[allow(dead_code)]
 fn python_fallback(args: &[String]) -> ! {
     // capture/install need Playwright; delegate to the Python CLI if it is installed.
     let candidates = ["browser-py", "python3"];
@@ -275,26 +292,57 @@ fn shell_words(s: &str) -> Vec<String> {
     out
 }
 
-/// One-line stderr hint when ~/.browser-daemon/update.json (written daily by the daemon) shows a newer release.
-fn update_notice() {
-    if std::env::var("BROWSER_NO_UPDATE_CHECK").is_ok() { return; }
-    let p = socket_path().with_file_name("update.json");
-    let Ok(txt) = std::fs::read_to_string(&p) else { return };
-    let Ok(v) = serde_json::from_str::<Value>(&txt) else { return };
-    let (Some(latest), Some(current)) = (v["latest"].as_str(), v["current"].as_str()) else { return };
-    let key = |s: &str| s.split('.').map(|x| x.parse::<u64>().unwrap_or(0)).collect::<Vec<_>>();
-    if key(latest) > key(current) {
-        eprintln!("browser-automation-cli {latest} is available (you have {current}): uv tool upgrade browser-automation-cli  (BROWSER_NO_UPDATE_CHECK=1 to silence)");
-    }
+fn update_notice() { browser_cli::update::notice(); }
+
+/// Standalone screenshot without the daemon: launch headless Chromium, navigate, capture.
+fn capture(args: &[String]) -> i32 {
+    let (pos, f) = parse_flags(args, &["-f", "--full-page"], &["-o", "--output"]);
+    let Some(url) = pos.first().cloned() else { eprintln!("usage: browser capture <url> [-f] [-o path]"); return 2 };
+    let full = f.contains_key("f") || f.contains_key("full-page");
+    let out = f.get("o").or(f.get("output")).and_then(|v| v.as_str()).map(String::from);
+    let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    let r = rt.block_on(async move {
+        let mut b = browser_cli::chrome::launch(true).await?;
+        let cdp = b.cdp.clone();
+        let t = cdp.send(None, "Target.createTarget", json!({"url": "about:blank"})).await?;
+        let a = cdp.send(None, "Target.attachToTarget", json!({"targetId": t["targetId"], "flatten": true})).await?;
+        let page = browser_cli::actions::Page { cdp: cdp.clone(), sid: a["sessionId"].as_str().unwrap_or("").to_string(), inflight: std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0)) };
+        page.send("Page.enable", json!({})).await?;
+        page.send("Emulation.setDeviceMetricsOverride", json!({"width": 1280, "height": 800, "deviceScaleFactor": 1, "mobile": false})).await?;
+        page.send("Page.navigate", json!({"url": url})).await?;
+        let _ = page.wait_ready("complete", 30_000).await;
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let mut p = Map::new();
+        if full { p.insert("full_page".into(), json!(true)); }
+        let path = out.unwrap_or_else(|| format!("/tmp/browser_capture_{}.jpg", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)));
+        p.insert("output".into(), json!(path));
+        let r = browser_cli::actions::screenshot(&page, &p, "capture").await;
+        b.close().await;
+        Ok::<Value, String>(r)
+    });
+    match r { Ok(mut v) => { if v.get("success").and_then(|x| x.as_bool()).unwrap_or(false) { v["full_page"] = json!(full); } output(v) } Err(e) => { println!("{}", err_json(&e)); 1 } }
+}
+
+fn update_cmd() -> i32 {
+    let info = browser_cli::update::check_now();
+    let Some(latest) = info["latest"].as_str() else { eprintln!("Could not reach PyPI: {}", info["error"]); return 1 };
+    if browser_cli::update::is_newer(latest, browser_cli::update::CURRENT) {
+        println!("{latest} available (you have {}). Upgrading with: uv tool upgrade browser-automation-cli", browser_cli::update::CURRENT);
+        let st = Command::new("uv").args(["tool", "upgrade", "browser-automation-cli"]).status();
+        match st { Ok(s) if s.success() => { println!("Restart the daemon to use the new version: browser shutdown && browser-daemon &"); 0 } _ => { eprintln!("Upgrade failed; run it manually: uv tool upgrade browser-automation-cli (or pip install -U browser-automation-cli)"); 1 } }
+    } else { println!("Up to date ({}).", browser_cli::update::CURRENT); 0 }
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "-h" || args[0] == "--help" { print!("{HELP}"); update_notice(); return; }
-    if args[0] == "--version" || args[0] == "-V" || args[0] == "version" { println!("{}", json!({"version": env!("CARGO_PKG_VERSION"), "client": "rust"})); update_notice(); return; }
+    if args[0] == "--version" || args[0] == "-V" || args[0] == "version" { let c = browser_cli::update::read_cache(); println!("{}", json!({"version": env!("CARGO_PKG_VERSION"), "client": "rust", "latest": c["latest"], "checked_at": c["checked_at"]})); update_notice(); return; }
     let cmd = args[0].as_str();
     let code = match cmd {
-        "capture" | "install" | "cleanup" | "update" => python_fallback(&args),
+        "capture" => capture(&args[1..]),
+        "install" => match browser_cli::install::run(&args[1..]) { Ok(()) => 0, Err(e) => { eprintln!("{}", err_json(&e)); 1 } },
+        "update" => update_cmd(),
+        "cleanup" => cleanup(),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));
             let r = send_request(&json!({"action": "create", "params": {"visible": visible}}));

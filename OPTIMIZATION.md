@@ -140,9 +140,10 @@ a small key table rather than Playwright's full keyboard layout. (A click blocke
 initially waited the full 10 s timeout; it now fails after 1 s if the *same* covering element is still
 there — measured 1.03 s — while missing/hidden targets keep waiting for the page to catch up.)
 
-Known gaps vs the Python daemon: `capture`/`install` still delegate to the Python package; no
-`--sequential` IME text; sessionStorage/IndexedDB not persisted (same as before); only same-origin
-frames are visible (cross-origin frames need `Target.setAutoAttach`, not done).
+Known gaps vs the Python daemon: no `--sequential` IME text; sessionStorage/IndexedDB not persisted
+(same as before); only same-origin frames are visible (cross-origin frames need `Target.setAutoAttach`,
+not done). `install` and `capture` are native since 0.4.0 (`install` downloads the Chrome-for-Testing
+build Playwright pins into the same cache; measured 29 s / 552 MB for both headless + headed builds).
 
 ## 8. Reproduce
 

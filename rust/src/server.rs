@@ -95,6 +95,7 @@ pub async fn run() -> Result<(), String> {
     std::fs::create_dir_all(&base).map_err(|e| e.to_string())?; actions::set_mode(&base, 0o700);
     let sock = socket_path();
     let _ = std::fs::remove_file(&sock);
+    crate::update::start_background_checks();
     let shared: Shared = Arc::new(Mutex::new(Manager::new()));
     // warm the headless browser so the first `create` is fast
     { let mut m = shared.lock().await; if let Err(e) = m.browser(true).await { eprintln!("[daemon] warning: {e}"); } }

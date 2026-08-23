@@ -49,9 +49,25 @@ pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
         all.push(d.join("chrome-mac/Chromium.app/Contents/MacOS/Chromium"));
         all.push(d.join("chrome-linux64/chrome")); all.push(d.join("chrome-linux/chrome"));
     }
+    // anything else under the build dirs (e.g. Playwright's linux-arm64 layout): search by binary name
+    for (prefix, names) in [("chromium_headless_shell-", &["chrome-headless-shell", "headless_shell"][..]), ("chromium-", &["Google Chrome for Testing", "chrome", "Chromium"][..])] {
+        if headless != prefix.starts_with("chromium_headless") { continue; }
+        if let Some(d) = newest(prefix) { if let Some(p) = find_binary(&d, names, 5) { all.push(p); } }
+    }
     all.push(PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"));
     all.push(PathBuf::from("/usr/bin/google-chrome")); all.push(PathBuf::from("/usr/bin/chromium"));
-    all.into_iter().find(|p| p.exists()).ok_or_else(|| "No Chromium found. Run `browser install` (or set BROWSER_CHROME_PATH).".into())
+    all.into_iter().find(|p| p.exists()).ok_or_else(|| "No Chromium found. Run `browser install` (downloads Chrome for Testing, ~300 MB) or set BROWSER_CHROME_PATH.".into())
+}
+
+fn find_binary(dir: &Path, names: &[&str], depth: u32) -> Option<PathBuf> {
+    if depth == 0 { return None; }
+    let mut subdirs = Vec::new();
+    for e in std::fs::read_dir(dir).ok()?.flatten() {
+        let p = e.path();
+        if p.is_file() && names.iter().any(|n| p.file_name().map(|f| f == *n).unwrap_or(false)) { return Some(p); }
+        if p.is_dir() { subdirs.push(p); }
+    }
+    subdirs.iter().find_map(|d| find_binary(d, names, depth - 1))
 }
 
 pub async fn launch(headless: bool) -> Result<Browser, String> {

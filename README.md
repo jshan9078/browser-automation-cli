@@ -171,8 +171,10 @@ Share [`SKILL.md`](SKILL.md) with your coding agent harness; see [AGENTS.md](AGE
 ## Rust implementation (preview)
 
 `rust/` contains a Rust client and daemon with the same CLI and socket protocol — no Python, Playwright or
-Node at runtime (Chromium from `browser install` or `BROWSER_CHROME_PATH` is still required). Per-call
-overhead 40 ms → 2 ms, daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See OPTIMIZATION.md §7.
+Node at all: `browser install` downloads the same Chrome-for-Testing build Playwright pins (into the same
+cache, so both implementations share it), and `capture` is native too. Per-call overhead 40 ms → 2 ms,
+daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See OPTIMIZATION.md §7. Published to PyPI as
+0.4.0 under the same name (wheels for Linux x86_64/aarch64, macOS arm64/x86_64).
 
 ```bash
 cd rust && cargo build --release
@@ -201,18 +203,19 @@ uv sync
 | `strict mode violation` | Selector matched several elements; use an `@ref`, `--text`, or a tighter selector |
 | Stale Chromium processes | `browser cleanup` |
 
-### Installing the Rust binaries (preview, macOS arm64 build only for now)
+### Installing the Rust binaries
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/jshan9078/browser-automation-cli/main/rust/install.sh | sh
 ```
 
-Installs `browser` and `browser-daemon` into `~/.local/bin` (set `BROWSER_CLI_BIN` to change). Other platforms: `cd rust && cargo build --release`.
+or simply `uv tool install browser-automation-cli` (0.4.0+ wheels are the Rust binaries). The script installs
+`browser` and `browser-daemon` into `~/.local/bin` (set `BROWSER_CLI_BIN` to change); other platforms: `cd rust && cargo build --release`.
 
 Wheel (same PyPI project name, so download stats carry over): `cd rust && uvx maturin build --release` →
-`uv tool install rust/target/wheels/browser_automation_cli-*.whl`. Publishing the Rust build to PyPI is
-planned for 0.4.0 once Linux/Windows wheels are built in CI; until then the PyPI package is the Python
-implementation and the Rust wheel is attached to the GitHub release.
+`uv tool install rust/target/wheels/browser_automation_cli-*.whl`. From 0.4.0 the PyPI package ships
+the Rust binaries; the Python implementation remains in `cli/` and `daemon/` for reference and for
+`python -m daemon.server`.
 
 CI (`.github/workflows/rust-wheels.yml`) builds wheels for Linux x86_64/aarch64 and macOS arm64/x86_64 on every
 push touching `rust/`, runs the end-to-end suite against the Rust daemon on Linux, attaches wheels to the release

@@ -25,10 +25,12 @@ jobs:
       - uses: astral-sh/setup-uv@v4
       - name: Build
         run: cd rust && cargo build --release
-      - name: Python deps + Chromium (Playwright's cached build is what the Rust daemon looks for)
+      - name: Python deps (test runner only) + system libs for Chromium
         run: |
           uv sync
-          uv run playwright install --with-deps chromium
+          uv run playwright install-deps chromium
+      - name: Native browser install (validates the Rust installer on Linux)
+        run: rust/target/release/browser install
       - name: End-to-end tests on the Rust daemon
         env:
           BROWSER_CLI: ${{ github.workspace }}/rust/target/release/browser
@@ -92,10 +94,25 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: Attach wheels to the GitHub release
+      - name: Tarballs for install.sh (binaries extracted from each wheel)
+        run: |
+          set -e
+          V="${GITHUB_REF_NAME#v}"
+          for w in dist/*.whl; do
+            case "$w" in *linux*x86_64*|*manylinux*x86_64*) t="linux-x86_64" ;; *linux*aarch64*|*manylinux*aarch64*) t="linux-aarch64" ;; *macosx*arm64*) t="darwin-arm64" ;; *macosx*x86_64*) t="darwin-x86_64" ;; *) continue ;; esac
+            rm -rf tmpw && mkdir tmpw && unzip -q "$w" -d tmpw
+            bin=$(find tmpw -type d -name scripts | head -1)
+            chmod +x "$bin"/browser "$bin"/browser-daemon
+            tar -C "$bin" -czf "dist/browser-cli-$V-$t.tar.gz" browser browser-daemon
+            (cd dist && shasum -a 256 "browser-cli-$V-$t.tar.gz" > "browser-cli-$V-$t.sha256")
+          done
+          rm -rf tmpw; ls -la dist
+      - name: Attach wheels and tarballs to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
+        run: |
+          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --notes "See OPTIMIZATION.md and AGENTBENCH.md for measurements." --generate-notes
+          gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
       - name: Publish to PyPI (only when the PYPI_API_TOKEN secret is set; same project name as the Python package)
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
