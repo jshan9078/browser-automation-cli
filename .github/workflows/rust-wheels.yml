@@ -118,4 +118,4 @@ jobs:
         run: |
           if [ -z "$UV_PUBLISH_TOKEN" ]; then echo "PYPI_API_TOKEN not set; skipping PyPI publish"; exit 0; fi
           pip install uv
-          uv publish dist/*
+          uv publish dist/browser_automation_cli-*
