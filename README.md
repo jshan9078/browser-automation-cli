@@ -200,3 +200,11 @@ uv sync
 | `ref @eN is unknown or stale` | Page changed; run `snapshot` again |
 | `strict mode violation` | Selector matched several elements; use an `@ref`, `--text`, or a tighter selector |
 | Stale Chromium processes | `browser cleanup` |
+
+### Installing the Rust binaries (preview, macOS arm64 build only for now)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jshan9078/browser-automation-cli/main/rust/install.sh | sh
+```
+
+Installs `browser` and `browser-daemon` into `~/.local/bin` (set `BROWSER_CLI_BIN` to change). Other platforms: `cd rust && cargo build --release`.
