@@ -134,6 +134,29 @@ def report():
     if rows:
         print(f"\nsuccess {sum(r['success'] for r in rows)}/{len(rows)} · median calls {statistics.median(r['cli_calls'] for r in rows)} · median wall {statistics.median(r['wall_s'] for r in rows):.1f}s · total tool tokens {sum(r['tool_output_tokens'] for r in rows)}")
 
+def passk():
+    """pass@k per implementation: attempts are runs labelled <impl> and <impl>-N."""
+    import statistics as st
+    rows = [json.loads(f.read_text()) for f in sorted(RES.glob("[th]*.json")) if "contaminated" not in f.name and "headed" not in f.name]
+    impls = {"python (sonnet)": "sonnet", "rust": "rust"}
+    print(f"{'impl':16s} {'tasks':>5s} {'attempts':>8s} {'pass@1':>7s} {'pass@2':>7s} {'med calls':>9s} {'med fail':>8s} {'med wall':>8s} {'med cli s':>9s} {'med tool tok':>12s} {'med agent tok':>13s} {'med cpu s':>9s} {'med rss':>7s}")
+    for name, prefix in impls.items():
+        att = [r for r in rows if r["run"] == prefix or r["run"].startswith(prefix + "-")]
+        tasks = sorted({r["task"] for r in att})
+        p1 = sum(all(r["success"] for r in att if r["task"] == t) for t in tasks)  # every attempt passed
+        p2 = sum(any(r["success"] for r in att if r["task"] == t) for t in tasks)
+        med = lambda k: st.median(r[k] for r in att)
+        print(f"{name:16s} {len(tasks):5d} {len(att):8d} {p1:4d}/{len(tasks):<2d} {p2:4d}/{len(tasks):<2d} {med('cli_calls'):9.0f} {med('failed_calls'):8.0f} {med('wall_s'):8.1f} {med('cli_time_s'):9.2f} {med('tool_output_tokens'):12.0f} {med('agent_tokens'):13.0f} {med('daemon_cpu_s'):9.2f} {med('daemon_rss_mb'):7.0f}")
+        print(f"{'':16s} totals: calls {sum(r['cli_calls'] for r in att)}, failed {sum(r['failed_calls'] for r in att)}, wall {sum(r['wall_s'] for r in att):.0f} s, tool tok {sum(r['tool_output_tokens'] for r in att):,}, agent tok {sum(r['agent_tokens'] or 0 for r in att):,}")
+    print("\nper task (calls / wall s / failed) attempt1 | attempt2:")
+    for t in sorted({r["task"] for r in rows}, key=lambda x: (x[0] != 't', int(''.join(c for c in x.split('_')[0] if c.isdigit())))):
+        cells = []
+        for prefix in ("sonnet", "rust"):
+            a = [r for r in rows if r["task"] == t and (r["run"] == prefix or r["run"].startswith(prefix + "-"))]
+            a.sort(key=lambda r: r["run"])
+            cells.append(" | ".join(f"{'P' if r['success'] else 'F'} {r['cli_calls']}/{r['wall_s']:.0f}/{r['failed_calls']}" for r in a))
+        print(f"  {t:22s} python: {cells[0]:28s} rust: {cells[1]}")
+
 if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "setup": setup(sys.argv[2])
@@ -144,4 +167,5 @@ if __name__ == "__main__":
         run = next((a.split("=",1)[1] for a in args if a.startswith("run=")), None)
         verify(sys.argv[2], ans, tok, run)
     elif cmd == "report": report()
+    elif cmd == "passk": passk()
     elif cmd == "tasks": print("\n".join(TASKS))

@@ -1,0 +1,28 @@
+{
+  "task": "h1_canvas_chart",
+  "run": "sonnet-2",
+  "success": true,
+  "answer": "eu-central",
+  "visible": false,
+  "wall_s": 23.17,
+  "wall_total_s": 48.7,
+  "cli_calls": 8,
+  "failed_calls": 0,
+  "cli_time_s": 0.4,
+  "tool_output_tokens": 533,
+  "snapshots": 3,
+  "screenshots": 1,
+  "daemon_cpu_s": 0.58,
+  "daemon_rss_mb": 462,
+  "agent_tokens": 46421,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e8\", \"snap\": true}",
+    "text",
+    "screenshot {\"output\": \"/Users/jonathan/Desktop/browser-cli/scratch/agen"
+  ]
+}

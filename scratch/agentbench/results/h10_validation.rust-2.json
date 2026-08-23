@@ -1,0 +1,32 @@
+{
+  "task": "h10_validation",
+  "run": "rust-2",
+  "success": true,
+  "answer": null,
+  "visible": false,
+  "wall_s": 43.69,
+  "wall_total_s": 73.0,
+  "cli_calls": 12,
+  "failed_calls": 0,
+  "cli_time_s": 10.48,
+  "tool_output_tokens": 1201,
+  "snapshots": 6,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.77,
+  "daemon_rss_mb": 371,
+  "agent_tokens": 44895,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "snapshot",
+    "batch batch:type,type,click",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e7\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"Acme Ops Platform Team E",
+    "click {\"selector\": \"@e31\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"Acme Ops Platform Te\"}",
+    "click {\"selector\": \"@e31\", \"snap\": true}"
+  ]
+}

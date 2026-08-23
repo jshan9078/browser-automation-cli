@@ -1,0 +1,27 @@
+{
+  "task": "t4_rename",
+  "run": "rust-2",
+  "success": true,
+  "answer": null,
+  "visible": false,
+  "wall_s": 15.12,
+  "wall_total_s": 40.3,
+  "cli_calls": 7,
+  "failed_calls": 0,
+  "cli_time_s": 0.51,
+  "tool_output_tokens": 1621,
+  "snapshots": 6,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.36,
+  "daemon_rss_mb": 376,
+  "agent_tokens": 44534,
+  "commands": [
+    "snapshot",
+    "navigate {\"snap\": true, \"url\": \"http://127.0.0.1:8790/\"}",
+    "batch batch:type,type,click",
+    "click {\"selector\": \"@e6\", \"snap\": true}",
+    "click {\"selector\": \"@e30\", \"snap\": true}",
+    "type {\"selector\": \"@e48\", \"snap\": true, \"text_value\": \"Atlas v2\"}",
+    "click {\"selector\": \"@e49\", \"snap\": true}"
+  ]
+}

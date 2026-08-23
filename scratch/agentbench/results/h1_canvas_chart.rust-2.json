@@ -1,0 +1,31 @@
+{
+  "task": "h1_canvas_chart",
+  "run": "rust-2",
+  "success": true,
+  "answer": "eu-central",
+  "visible": false,
+  "wall_s": 21.44,
+  "wall_total_s": 48.4,
+  "cli_calls": 11,
+  "failed_calls": 0,
+  "cli_time_s": 0.39,
+  "tool_output_tokens": 570,
+  "snapshots": 3,
+  "screenshots": 1,
+  "daemon_cpu_s": 0.53,
+  "daemon_rss_mb": 378,
+  "agent_tokens": 45280,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "click {\"selector\": \"@e3\"}",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\"}",
+    "snapshot",
+    "click {\"selector\": \"@e8\"}",
+    "snapshot",
+    "text",
+    "screenshot {\"output\": \"/Users/jonathan/Desktop/browser-cli/scratch/agen"
+  ]
+}

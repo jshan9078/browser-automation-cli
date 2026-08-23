@@ -1,0 +1,30 @@
+{
+  "task": "h2_iframe_ticket",
+  "run": "rust-2",
+  "success": true,
+  "answer": null,
+  "visible": false,
+  "wall_s": 13.02,
+  "wall_total_s": 39.6,
+  "cli_calls": 10,
+  "failed_calls": 0,
+  "cli_time_s": 0.43,
+  "tool_output_tokens": 805,
+  "snapshots": 4,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.37,
+  "daemon_rss_mb": 369,
+  "agent_tokens": 42464,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e15\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"Turnstile widget not ren",
+    "select_option {\"selector\": \"@e28\", \"value\": \"High\"}",
+    "type {\"selector\": \"@e29\", \"text_value\": \"The Turnstile CAPTCHA wi",
+    "click {\"selector\": \"@e30\", \"snap\": true}"
+  ]
+}

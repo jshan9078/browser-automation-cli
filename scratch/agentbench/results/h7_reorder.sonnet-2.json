@@ -1,0 +1,33 @@
+{
+  "task": "h7_reorder",
+  "run": "sonnet-2",
+  "success": true,
+  "answer": null,
+  "visible": false,
+  "wall_s": 35.62,
+  "wall_total_s": 60.3,
+  "cli_calls": 13,
+  "failed_calls": 1,
+  "cli_time_s": 0.82,
+  "tool_output_tokens": 1545,
+  "snapshots": 9,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.67,
+  "daemon_rss_mb": 455,
+  "agent_tokens": 46398,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\", \"snap\": true}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e11\", \"snap\": true}",
+    "snapshot {\"all\": true}",
+    "click {\"selector\": \"@e29\"}",
+    "press_key {\"key\": \"Alt+ArrowUp\", \"selector\": \"@e29\"}",
+    "press_key {\"key\": \"Alt+ArrowUp\", \"selector\": \"@e29\", \"snap\": true}",
+    "snapshot",
+    "press_key {\"key\": \"Alt+ArrowUp\", \"selector\": \"@e34\", \"snap\": true}",
+    "click {\"selector\": \"@e44\", \"snap\": true}"
+  ]
+}

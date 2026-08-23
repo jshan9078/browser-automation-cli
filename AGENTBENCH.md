@@ -105,6 +105,49 @@ payload and the global install was updated.
 
 Headed data point (`BENCH_VISIBLE=1`, a visible window): h1 canvas chart PASS, 30 calls, 126 s, 1 screenshot, daemon RSS 1380 MB. The extra calls were login retries: typed text was dropped because a non-frontmost window has no document focus — fixed afterwards with `Emulation.setFocusEmulationEnabled` (tests pass; the headed task has not been re-run since).
 
+## pass@2 (2026-08-23): two independent attempts per task, both implementations, Sonnet
+
+Second attempt of every task on both daemons (`harness.py passk`). Rows labelled `sonnet`/`rust` are
+attempt 1, `sonnet-2`/`rust-2` attempt 2. Python h5 has three rows because the first run predates the
+overlay fix to the scenario itself.
+
+```
+impl             tasks attempts  pass@1  pass@2 med calls med fail med wall med cli s med tool tok med agent tok med cpu s med rss
+python (sonnet)     17       35   17/17   17/17        16        1     33.8      1.37         1545         47006      0.79     452
+                 totals: calls 958, failed 72, wall 1765 s, tool tok 80,393, agent tok 1,706,103
+rust                17       34   17/17   17/17        12        0     28.1      0.55         1298         45032      0.46     375
+                 totals: calls 483, failed 14, wall 1110 s, tool tok 50,048, agent tok 1,547,341
+
+per task (calls / wall s / failed) attempt1 | attempt2:
+  t1_create_project      python: P 19/46/4 | P 20/58/0        rust: P 16/47/0 | P 17/45/0
+  t2_archive_project     python: P 20/36/5 | P 11/31/0        rust: P 15/29/0 | P 10/26/0
+  t3_settings            python: P 11/28/0 | P 11/24/0        rust: P 10/22/0 | P 9/20/0
+  t4_rename              python: P 12/20/2 | P 14/33/0        rust: P 9/20/0 | P 7/15/0
+  t5_extract_count       python: P 17/35/0 | P 16/39/0        rust: P 17/60/3 | P 17/32/0
+  t6_extract_account     python: P 9/16/0 | P 7/12/0          rust: P 8/35/0 | P 8/16/1
+  t7_live_wikipedia      python: P 3/8/1 | P 3/7/0            rust: P 2/4/0 | P 2/4/0
+  h1_canvas_chart        python: P 16/28/5 | P 8/23/0         rust: P 9/26/0 | P 11/21/0
+  h2_iframe_ticket       python: P 438/331/21 | P 27/237/4    rust: P 9/12/0 | P 10/13/0
+  h3_shadow_flags        python: P 18/63/1 | P 18/66/1        rust: P 8/19/0 | P 8/12/0
+  h4_audit_delayed       python: P 20/41/5 | P 20/59/2        rust: P 13/35/0 | P 23/199/2
+  h5_banner_overlay      python: P 11/24/0 | P 22/54/6 | P 16/51/1 rust: P 12/46/2 | P 12/27/2
+  h6_infinite_scroll     python: P 26/28/2 | P 21/27/0        rust: P 47/23/0 | P 68/35/0
+  h7_reorder             python: P 15/34/2 | P 13/36/1        rust: P 14/33/2 | P 13/36/1
+  h8_datepicker          python: P 13/33/2 | P 19/53/1        rust: P 18/33/1 | P 14/30/0
+  h9_reauth_export       python: P 17/32/4 | P 13/28/0        rust: P 13/32/0 | P 11/32/0
+  h10_validation         python: P 17/63/2 | P 17/63/0        rust: P 11/26/0 | P 12/44/0
+```
+
+Reading: **pass@1 = 17/17 and pass@2 = 17/17 for both implementations** — no task failed in any
+attempt on either daemon, so the rewrite did not cost accuracy. Where they differ is cost: Rust does
+the same work with **half the CLI calls (958 → 483), a fifth of the failed calls (72 → 14), 37 %
+less wall time, 38 % fewer tool-output tokens and ~9 % fewer agent tokens**, with lower daemon CPU
+(0.46 vs 0.79 s median) and RSS (375 vs 452 MB). The iframe task is the clearest case: Python 438
+and 27 calls (331 s, 237 s — the second attempt worked around the gap by navigating to the frame
+URL), Rust 9 and 10 calls (12–13 s). Variance is real on both sides (h4 on Rust: 35 s then 199 s
+from the agent's own long `wait`s; h6 on Rust: 47 and 68 calls of `eval` polling) — which is why two
+attempts per task is the minimum for judging a change.
+
 ## What the runs revealed
 
 1. **Iframes are the one real capability gap.** h2 succeeded only because the agent tabbed into the

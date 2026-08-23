@@ -1,0 +1,30 @@
+{
+  "task": "t2_archive_project",
+  "run": "rust-2",
+  "success": true,
+  "answer": null,
+  "visible": false,
+  "wall_s": 25.81,
+  "wall_total_s": 51.3,
+  "cli_calls": 10,
+  "failed_calls": 0,
+  "cli_time_s": 0.54,
+  "tool_output_tokens": 1318,
+  "snapshots": 6,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.46,
+  "daemon_rss_mb": 374,
+  "agent_tokens": 46785,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e6\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"Orion\"}",
+    "click {\"selector\": \"@e28\", \"snap\": true}",
+    "click {\"selector\": \"@e49\", \"snap\": true}",
+    "click {\"selector\": \"@e53\", \"snap\": true}"
+  ]
+}
