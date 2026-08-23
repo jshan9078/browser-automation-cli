@@ -75,11 +75,21 @@ impl Page {
     /// Resolve a target with retries (actionability) up to the timeout.
     async fn resolve(&self, t: &Value, timeout_ms: u64) -> Result<Value, String> {
         let start = Instant::now();
+        let mut covered_since: Option<(String, Instant)> = None;
         loop {
             let r = self.call(js::RESOLVE, &[t.clone()]).await?;
             if r.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) { return Ok(r); }
             let reason = r.get("reason").and_then(|v| v.as_str()).unwrap_or("cannot resolve target").to_string();
             if r.get("fatal").and_then(|v| v.as_bool()).unwrap_or(false) { return Err(reason); }
+            // An element that is missing or hidden may still appear (page loading): keep waiting.
+            // An element covered by the *same* overlay for a full second is a stable blocker
+            // (banner, modal): fail fast so the agent can dismiss it instead of burning the timeout.
+            if reason.contains(" is covered by ") {
+                match &covered_since {
+                    Some((prev, since)) if *prev == reason => { if since.elapsed() >= Duration::from_millis(1000) { return Err(reason); } }
+                    _ => covered_since = Some((reason.clone(), Instant::now())),
+                }
+            } else { covered_since = None; }
             if start.elapsed() > Duration::from_millis(timeout_ms) { return Err(format!("Timeout {timeout_ms}ms exceeded: {reason}")); }
             tokio::time::sleep(Duration::from_millis(50)).await;
         }

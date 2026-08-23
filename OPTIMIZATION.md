@@ -135,10 +135,10 @@ resolve through the same role/name code the snapshot uses (strict mode, actionab
 | daemon start-up | 0.73 s | 0.41 s | |
 
 Agent benchmark, all 17 tasks (same Sonnet subagents, see AGENTBENCH.md): Totals over 17 tasks — calls 693 → 231, failed calls 62 → 8, tool-output tokens 32,929 → 23,761; 17/17 pass on both. Iframe ticket
-438 → 9 calls (331 s → 12 s), shadow-DOM flags 18 → 8. Two things got worse and are logged honestly: a click that is covered by an overlay
-now waits the full 10 s action timeout before reporting "covered by …" (Python failed after ~1 s via
-Playwright's own retry), and `press`/`type --sequential` synthesize key events from a small key table
-rather than Playwright's full keyboard layout.
+438 → 9 calls (331 s → 12 s), shadow-DOM flags 18 → 8. One thing got worse and is logged honestly: `press`/`type --sequential` synthesize key events from
+a small key table rather than Playwright's full keyboard layout. (A click blocked by an overlay
+initially waited the full 10 s timeout; it now fails after 1 s if the *same* covering element is still
+there — measured 1.03 s — while missing/hidden targets keep waiting for the page to catch up.)
 
 Known gaps vs the Python daemon: `capture`/`install` still delegate to the Python package; no
 `--sequential` IME text; sessionStorage/IndexedDB not persisted (same as before); only same-origin
