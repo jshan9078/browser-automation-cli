@@ -1,0 +1,32 @@
+{
+  "task": "h4_audit_delayed",
+  "run": "rust",
+  "success": true,
+  "answer": "dara",
+  "wall_s": 34.86,
+  "wall_total_s": 60.9,
+  "cli_calls": 13,
+  "failed_calls": 0,
+  "cli_time_s": 0.51,
+  "tool_output_tokens": 1980,
+  "snapshots": 4,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.61,
+  "daemon_rss_mb": 378,
+  "agent_tokens": 44424,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e14\", \"snap\": true}",
+    "snapshot",
+    "text",
+    "click {\"selector\": \"@e27\"}",
+    "text",
+    "click {\"selector\": \"@e27\"}",
+    "text",
+    "text"
+  ]
+}

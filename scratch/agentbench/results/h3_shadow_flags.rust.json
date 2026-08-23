@@ -1,0 +1,27 @@
+{
+  "task": "h3_shadow_flags",
+  "run": "rust",
+  "success": true,
+  "answer": null,
+  "wall_s": 19.33,
+  "wall_total_s": 49.8,
+  "cli_calls": 8,
+  "failed_calls": 0,
+  "cli_time_s": 0.45,
+  "tool_output_tokens": 923,
+  "snapshots": 5,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.38,
+  "daemon_rss_mb": 365,
+  "agent_tokens": 42956,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e10\", \"snap\": true}",
+    "click {\"selector\": \"@e27\", \"snap\": true}",
+    "click {\"selector\": \"@e30\", \"snap\": true}"
+  ]
+}

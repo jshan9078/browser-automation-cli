@@ -1,0 +1,31 @@
+{
+  "task": "h5_banner_overlay",
+  "run": "rust",
+  "success": true,
+  "answer": null,
+  "wall_s": 46.44,
+  "wall_total_s": 71.0,
+  "cli_calls": 12,
+  "failed_calls": 2,
+  "cli_time_s": 20.51,
+  "tool_output_tokens": 2526,
+  "snapshots": 7,
+  "screenshots": 0,
+  "daemon_cpu_s": 1.16,
+  "daemon_rss_mb": 377,
+  "agent_tokens": 46288,
+  "commands": [
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e13\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"finance@acme-internal.te",
+    "click {\"selector\": \"@e29\", \"snap\": true}",
+    "snapshot",
+    "click {\"selector\": \"@e61\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"finance@acme-internal.te",
+    "click {\"selector\": \"@e29\", \"snap\": true}"
+  ]
+}

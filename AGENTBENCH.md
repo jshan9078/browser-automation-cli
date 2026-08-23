@@ -74,6 +74,23 @@ Baseline note: v0.2.1 cannot run this suite as-is (its snapshot omits the form a
 `button.group.flex` click hits the wrong button — see OPTIMIZATION.md), so there is no older
 agent-level row; this table is the baseline for future rewrites.
 
+### Rust daemon (v0.4.0-alpha), same tasks, same model
+
+| task | Python calls / wall / failed | Rust calls / wall / failed |
+|---|---|---|
+| h2 iframe ticket | 438 / 331 s / 21 | **9 / 12 s / 0** |
+| h3 shadow DOM flags | 18 / 63 s / 1 | **8 / 19 s / 0** |
+| h4 delayed + paginated audit | 20 / 41 s / 5 | 13 / 35 s / 0 |
+| h5 banner overlay | 22 / 54 s / 6 | 12 / 46 s / 2 |
+| h7 keyboard reorder | 15 / 34 s / 2 | 14 / 33 s / 2 |
+| t1 create project | 19 / 46 s / 4 | 16 / 48 s / 0 |
+| h1 canvas chart | 16 / 28 s / 5 | 46 / 131 s / 5 ¹ |
+
+¹ Contaminated run: the agent invoked the stale globally-installed `browser` 0.2.1 instead of the shim,
+whose `type` payload the new daemon misread as a text-target; it then typed key-by-key. The daemon now
+accepts the legacy payload and the global install was updated; the row is kept as a reminder that the
+harness must count daemon-side and that old clients exist.
+
 ## What the runs revealed
 
 1. **Iframes are the one real capability gap.** h2 succeeded only because the agent tabbed into the

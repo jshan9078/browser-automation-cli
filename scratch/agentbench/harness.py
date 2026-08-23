@@ -6,7 +6,9 @@
 import json, os, re, statistics, subprocess, sys, time, urllib.request
 from pathlib import Path
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parents[1]
-PY = str(ROOT / ".venv/bin/python"); PORT = 8790; BASE = f"http://127.0.0.1:{PORT}"
+PY = str(ROOT / ".venv/bin/python"); PORT = 8790
+CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]
+DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.server"]; BASE = f"http://127.0.0.1:{PORT}"
 SOCK = Path.home() / ".browser-daemon" / "socket"; RES = HERE / "results"; RES.mkdir(exist_ok=True)
 LOG = HERE / "results" / "calls.log"; META = HERE / "results" / "current.json"
 ENV = {**os.environ, "PYTHONPATH": str(ROOT)}
@@ -65,9 +67,14 @@ Run `browser --help` once if you need the command reference. A session already e
 Work efficiently: prefer snapshot refs (@eN) and --text/--label targets, use `-s` to get a snapshot with an action, and `batch` for known sequences. Do not create or delete sessions. When done, reply with a one-line summary (and `ANSWER: ...` as the last line if asked)."""
 
 def ensure_daemon():
-    if not SOCK.exists() or subprocess.run(["pgrep", "-f", "daemon.server"], capture_output=True).returncode != 0:
+    def alive(): return subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0
+    if alive() and not SOCK.exists():  # a daemon is shutting down; let it finish
+        for _ in range(100):
+            if not alive(): break
+            time.sleep(0.1)
+    if not SOCK.exists() or not alive():
         SOCK.unlink(missing_ok=True)
-        subprocess.Popen([PY, "-m", "daemon.server"], env=ENV, stdout=subprocess.DEVNULL, stderr=open(RES / "daemon.log", "a"))
+        subprocess.Popen(DAEMON, env=ENV, stdout=subprocess.DEVNULL, stderr=open(RES / "daemon.log", "a"))
         while not SOCK.exists(): time.sleep(0.05)
         time.sleep(0.3)
     try: urllib.request.urlopen(f"{BASE}/__state", timeout=1)
@@ -75,7 +82,7 @@ def ensure_daemon():
         subprocess.Popen([PY, str(HERE / "app/server.py"), str(PORT)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); time.sleep(0.5)
 
 def daemon_pid():
-    out = subprocess.run(["pgrep", "-f", "daemon.server"], capture_output=True, text=True).stdout.split()
+    out = subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True, text=True).stdout.split()
     return int(out[0]) if out else None
 
 def tree_cpu(pid):
@@ -85,9 +92,9 @@ def tree_cpu(pid):
 def setup(task):
     ensure_daemon()
     urllib.request.urlopen(urllib.request.Request(f"{BASE}/__reset", data=b"{}", method="POST"))
-    for s in json.loads(subprocess.run([PY, "-m", "cli.main", "list"], capture_output=True, text=True, env=ENV).stdout):
-        subprocess.run([PY, "-m", "cli.main", s["session_id"], "delete"], capture_output=True, env=ENV)
-    sid = subprocess.run([PY, "-m", "cli.main", "create"], capture_output=True, text=True, env=ENV).stdout.strip()
+    for s in json.loads(subprocess.run([*CLI, "list"], capture_output=True, text=True, env=ENV).stdout):
+        subprocess.run([*CLI, s["session_id"], "delete"], capture_output=True, env=ENV)
+    sid = subprocess.run([*CLI, "create"], capture_output=True, text=True, env=ENV).stdout.strip()
     LOG.write_text("")
     META.write_text(json.dumps({"task": task, "sid": sid, "t0": time.time(), "cpu0": tree_cpu(daemon_pid())}))
     print(AGENT_RULES.format(sid=sid) + "\n\nTASK: " + TASKS[task]["prompt"] + f"\n\nSet the environment variable AGENTBENCH_LOG={LOG} and use the `browser` binary at {HERE}/bin/browser (e.g. `export PATH={HERE}/bin:$PATH`).")

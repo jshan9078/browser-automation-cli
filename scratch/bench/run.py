@@ -7,6 +7,8 @@ import json, os, re, statistics, subprocess, sys, time
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PY = str(ROOT / ".venv/bin/python")
+CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]          # e.g. rust/target/release/browser
+DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.server"]
 SITE = Path(__file__).parent / "site"
 PORT = 8765
 RESULTS = Path(__file__).parent / "results"; RESULTS.mkdir(exist_ok=True)
@@ -15,7 +17,7 @@ ENV = {**os.environ, "PYTHONPATH": str(ROOT)}
 
 def cli(*args):
     t = time.perf_counter()
-    p = subprocess.run([PY, "-m", "cli.main", *args], capture_output=True, text=True, env=ENV)
+    p = subprocess.run([*CLI, *args], capture_output=True, text=True, env=ENV)
     return time.perf_counter() - t, p.stdout, p.stderr
 
 def procs():
@@ -65,11 +67,11 @@ def main():
     label = sys.argv[1]; iters = int(sys.argv[2]) if len(sys.argv) > 2 else 3
     # --- start site + daemon
     site = subprocess.Popen([PY, str(SITE / "server.py"), str(PORT)])
-    subprocess.run(["pkill", "-f", "daemon.server"], capture_output=True)
-    while subprocess.run(["pgrep", "-f", "daemon.server"], capture_output=True).returncode == 0: time.sleep(0.1)
+    subprocess.run(["pkill", "-f", "daemon.server|browser-daemon"], capture_output=True)
+    while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0: time.sleep(0.1)
     if SOCK.exists(): SOCK.unlink()
     t0 = time.perf_counter()
-    daemon = subprocess.Popen([PY, "-m", "daemon.server"], env=ENV, stdout=subprocess.DEVNULL, stderr=open(RESULTS / f"{label}.daemon.log", "w"))
+    daemon = subprocess.Popen(DAEMON, env=ENV, stdout=subprocess.DEVNULL, stderr=open(RESULTS / f"{label}.daemon.log", "w"))
     while not SOCK.exists(): time.sleep(0.05)
     time.sleep(0.3)
     startup = time.perf_counter() - t0
@@ -97,7 +99,7 @@ def main():
             dt, out, _ = cli(sid, "click", ref); rec("click_ref", dt, out, {"ok": '"success": true' in out})
             dt, out, _ = cli(sid, "navigate", f"{base}/dashboard.html", "-s"); rec("navigate_with_snapshot", dt, out, {"ok": "@e" in out})
             t = time.perf_counter()
-            p = subprocess.run([PY, "-m", "cli.main", sid, "batch"], input='{"cmd":"type #wname batchy"}\n{"cmd":"type #host h.example"}\n{"cmd":"click --text Create"}\n{"action":"text","params":{"selector":"#status"}}\n', capture_output=True, text=True, env=ENV)
+            p = subprocess.run([*CLI, sid, "batch"], input='{"cmd":"type #wname batchy"}\n{"cmd":"type #host h.example"}\n{"cmd":"click --text Create"}\n{"action":"text","params":{"selector":"#status"}}\n', capture_output=True, text=True, env=ENV)
             rec("batch_4_ops", time.perf_counter() - t, p.stdout, {"ok": "Created widget batchy" in p.stdout})
             dt, out, _ = cli(sid, "type", "#wname", "zera-web"); rec("type", dt, out)
             dt, out, _ = cli(sid, "type", "#host", "zera.example"); rec("type", dt, out)

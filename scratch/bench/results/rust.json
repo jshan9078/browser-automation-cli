@@ -1,0 +1,126 @@
+{
+  "label": "rust",
+  "startup_s": 0.40844079200178385,
+  "steps": {
+    "create": {
+      "median_s": 0.11251537501811981,
+      "bytes": 9,
+      "tokens": 2
+    },
+    "navigate_spa": {
+      "median_s": 0.10659537499304861,
+      "bytes": 120,
+      "tokens": 30,
+      "ok": true
+    },
+    "snapshot": {
+      "median_s": 0.006418416043743491,
+      "bytes": 2884,
+      "tokens": 721,
+      "target_visible": true,
+      "hidden_consent_leaked": false
+    },
+    "click_ambiguous": {
+      "median_s": 0.003877958981320262,
+      "bytes": 154,
+      "tokens": 38
+    },
+    "click_text": {
+      "median_s": 0.08919550001155585,
+      "bytes": 101,
+      "tokens": 25,
+      "ok": true
+    },
+    "click_ref": {
+      "median_s": 0.0847951250616461,
+      "bytes": 101,
+      "tokens": 25,
+      "ok": true
+    },
+    "navigate_with_snapshot": {
+      "median_s": 0.10477658302988857,
+      "bytes": 2884,
+      "tokens": 721,
+      "ok": true
+    },
+    "batch_4_ops": {
+      "median_s": 0.09470054192934185,
+      "bytes": 507,
+      "tokens": 127,
+      "ok": true
+    },
+    "type": {
+      "median_s": 0.00627902103587985,
+      "bytes": 101.0,
+      "tokens": 25.0
+    },
+    "press": {
+      "median_s": 0.07129579200409353,
+      "bytes": 101,
+      "tokens": 25
+    },
+    "click_exact": {
+      "median_s": 0.08316120901145041,
+      "bytes": 101,
+      "tokens": 25
+    },
+    "snapshot_scoped": {
+      "median_s": 0.008539541973732412,
+      "bytes": 169,
+      "tokens": 42
+    },
+    "navigate_static": {
+      "median_s": 0.10702650004532188,
+      "bytes": 109,
+      "tokens": 27
+    },
+    "back": {
+      "median_s": 0.08323474996723235,
+      "bytes": 101,
+      "tokens": 25
+    },
+    "screenshot": {
+      "median_s": 0.04063812491949648,
+      "bytes": 138,
+      "tokens": 34,
+      "file_kb": 53.703125
+    },
+    "list": {
+      "median_s": 0.004260499961674213,
+      "bytes": 307,
+      "tokens": 77
+    }
+  },
+  "correct": {
+    "ambiguous_click": [
+      "refused",
+      "refused",
+      "refused"
+    ],
+    "click_text": [
+      true,
+      true,
+      true
+    ],
+    "form_flow": [
+      true,
+      true,
+      true
+    ]
+  },
+  "iters": 3,
+  "python_floor_s": 0.02393024996854365,
+  "idle_active": {
+    "cpu_pct": 7.6,
+    "gpu_pct": 0.0,
+    "rss_mb": 388.765625
+  },
+  "idle": {
+    "cpu_pct": 7.799999999999999,
+    "gpu_pct": 0.0,
+    "rss_mb": 387.0,
+    "procs": 6
+  },
+  "total_task_s": 1.0073103139875457,
+  "total_task_tokens": 1969.0
+}

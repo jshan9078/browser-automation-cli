@@ -112,7 +112,40 @@ Ordered by expected payoff; each should be measured with the same harness.
 7. **Linux/Windows pass** — the `--no-sandbox` and `chrome-headless-shell` assumptions were only measured on macOS.
 8. **CI** — run `tests/test_cli.py` (20 tests, ~25 s) on push.
 
-## 7. Reproduce
+## 7. Rust rewrite (v0.4.0-alpha) — measured against the same harness
+
+`rust/` contains a Rust client (`browser`) and daemon (`browser-daemon`) speaking the identical socket
+protocol, driving Chromium over raw CDP (no Playwright, no Node). The injected JS moved over
+unchanged except that the snapshot now walks same-origin iframes and open shadow roots, and targets
+resolve through the same role/name code the snapshot uses (strict mode, actionability retries,
+"covered by <div#banner>" errors). Validated by the same 20 end-to-end tests (`BROWSER_CLI=… BROWSER_DAEMON=…`).
+
+| | Python v0.3.0 | Rust | |
+|---|---:|---:|---|
+| CLI call overhead (`list`) | 40 ms | **2 ms** | no interpreter start-up |
+| `snapshot` | 51 ms | **6 ms** | |
+| `type` | 52 ms | 6 ms | |
+| `click` (incl. 60 ms DOM-settle) | 145 ms | 83 ms | |
+| whole benchmark task | 1.7 s | **1.0 s** | |
+| daemon RSS, test app | 478 MB | **387 MB** | Node driver (~150 MB) gone |
+| daemon RSS, Cloudflare | 1122 MB | 1028 MB | |
+| Cloudflare parked CPU | 2 % | 4 % | same freeze mechanism |
+| headed window parked on Cloudflare | 27 % | 4 % | |
+| binaries | Python + Playwright + Node driver | 0.5 MB + 1.0 MB | Chromium still ~170 MB |
+| daemon start-up | 0.73 s | 0.41 s | |
+
+Agent benchmark (same tasks, same Sonnet subagents, see AGENTBENCH.md): iframe ticket 438 → 9 calls
+(331 s → 12 s), shadow-DOM flags 18 → 8, delayed audit 20 → 13 (5 → 0 failed calls), wizard 19 → 16
+(4 → 0 failed). Two things got worse and are logged honestly: a click that is covered by an overlay
+now waits the full 10 s action timeout before reporting "covered by …" (Python failed after ~1 s via
+Playwright's own retry), and `press`/`type --sequential` synthesize key events from a small key table
+rather than Playwright's full keyboard layout.
+
+Known gaps vs the Python daemon: `capture`/`install` still delegate to the Python package; no
+`--sequential` IME text; sessionStorage/IndexedDB not persisted (same as before); only same-origin
+frames are visible (cross-origin frames need `Target.setAutoAttach`, not done).
+
+## 8. Reproduce
 
 ```bash
 uv sync
@@ -124,3 +157,6 @@ BENCH_IDLE_URL=https://dash.cloudflare.com/login .venv/bin/python scratch/bench/
 ```
 
 `git stash` the working tree and run `run.py baseline` to regenerate the v0.2.1 numbers.
+
+Rust: `cd rust && cargo build --release`, then prefix any of the above with
+`BROWSER_CLI=$PWD/rust/target/release/browser BROWSER_DAEMON=$PWD/rust/target/release/browser-daemon`.

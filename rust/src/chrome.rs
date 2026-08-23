@@ -1,0 +1,91 @@
+//! Locate and launch Chromium (Playwright's cached builds, or an explicit path), return a CDP client.
+use crate::cdp::Cdp;
+use std::path::{Path, PathBuf};
+use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{Child, Command};
+
+pub const LAUNCH_ARGS: &[&str] = &[
+    "--disable-dev-shm-usage", "--disable-blink-features=AutomationControlled", "--disable-gpu",
+    "--force-prefers-reduced-motion", "--disable-background-networking", "--disable-component-update",
+    "--no-first-run", "--no-default-browser-check", "--disable-sync", "--disable-extensions",
+    "--disable-features=Translate,MediaRouter,OptimizationHints", "--password-store=basic", "--use-mock-keychain",
+    "--disable-search-engine-choice-screen", "--hide-scrollbars", "--mute-audio", "--remote-debugging-port=0",
+];
+
+pub struct Browser {
+    pub cdp: Cdp,
+    pub child: Child,
+    pub headless: bool,
+    pub version: String,
+    _user_data: PathBuf,
+}
+
+fn playwright_cache() -> PathBuf {
+    if let Ok(p) = std::env::var("PLAYWRIGHT_BROWSERS_PATH") { return PathBuf::from(p); }
+    let home = std::env::var("HOME").unwrap_or_default();
+    if cfg!(target_os = "macos") { Path::new(&home).join("Library/Caches/ms-playwright") } else { Path::new(&home).join(".cache/ms-playwright") }
+}
+
+/// Newest matching build dir under Playwright's cache, e.g. chromium_headless_shell-1234.
+fn newest(prefix: &str) -> Option<PathBuf> {
+    let mut dirs: Vec<(u32, PathBuf)> = std::fs::read_dir(playwright_cache()).ok()?.flatten()
+        .filter_map(|e| { let n = e.file_name().into_string().ok()?; let rest = n.strip_prefix(prefix)?; let v: u32 = rest.parse().ok()?; Some((v, e.path())) }).collect();
+    dirs.sort();
+    dirs.pop().map(|(_, p)| p)
+}
+
+pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
+    if let Ok(p) = std::env::var("BROWSER_CHROME_PATH") { return Ok(PathBuf::from(p)); }
+    let arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
+    let candidates: Vec<PathBuf> = if headless {
+        newest("chromium_headless_shell-").into_iter().flat_map(|d| vec![
+            d.join(format!("chrome-headless-shell-mac-{arch}/chrome-headless-shell")),
+            d.join("chrome-headless-shell-linux64/chrome-headless-shell"), d.join("chrome-headless-shell-linux/chrome-headless-shell")]).collect()
+    } else { vec![] };
+    let mut all = candidates;
+    if let Some(d) = newest("chromium-") {
+        all.push(d.join(format!("chrome-mac-{arch}/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing")));
+        all.push(d.join("chrome-mac/Chromium.app/Contents/MacOS/Chromium"));
+        all.push(d.join("chrome-linux64/chrome")); all.push(d.join("chrome-linux/chrome"));
+    }
+    all.push(PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"));
+    all.push(PathBuf::from("/usr/bin/google-chrome")); all.push(PathBuf::from("/usr/bin/chromium"));
+    all.into_iter().find(|p| p.exists()).ok_or_else(|| "No Chromium found. Run `browser install` (or set BROWSER_CHROME_PATH).".into())
+}
+
+pub async fn launch(headless: bool) -> Result<Browser, String> {
+    let exe = find_executable(headless)?;
+    let user_data = std::env::temp_dir().join(format!("browser-daemon-{}-{}", if headless { "headless" } else { "headed" }, std::process::id()));
+    let mut cmd = Command::new(&exe);
+    cmd.args(LAUNCH_ARGS).arg(format!("--user-data-dir={}", user_data.display()));
+    if headless { cmd.arg("--headless"); } else { cmd.arg("--window-size=1280,900"); }
+    if cfg!(target_os = "linux") { cmd.arg("--no-sandbox"); }
+    cmd.arg("about:blank").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped()).kill_on_drop(true);
+    let mut child = cmd.spawn().map_err(|e| format!("launch {}: {e}", exe.display()))?;
+    let stderr = child.stderr.take().ok_or("no stderr")?;
+    let mut lines = BufReader::new(stderr).lines();
+    let ws = tokio::time::timeout(std::time::Duration::from_secs(20), async {
+        while let Ok(Some(line)) = lines.next_line().await {
+            if let Some(i) = line.find("ws://") { return Some(line[i..].trim().to_string()); }
+        }
+        None
+    }).await.map_err(|_| "Chromium did not print a DevTools URL in 20s")?.ok_or("Chromium exited before printing a DevTools URL")?;
+    tokio::spawn(async move { while let Ok(Some(_)) = lines.next_line().await {} }); // drain stderr
+    let cdp = Cdp::connect(&ws).await?;
+    let v = cdp.send(None, "Browser.getVersion", serde_json::json!({})).await?;
+    let version = v.get("product").and_then(|p| p.as_str()).unwrap_or("Chrome/0").to_string();
+    Ok(Browser { cdp, child, headless, version, _user_data: user_data })
+}
+
+impl Browser {
+    pub async fn close(&mut self) {
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(3), self.cdp.send(None, "Browser.close", serde_json::json!({}))).await;
+        let _ = self.child.kill().await;
+        let _ = std::fs::remove_dir_all(&self._user_data);
+    }
+    pub fn user_agent(&self) -> String {
+        let major = self.version.split('/').nth(1).and_then(|v| v.split('.').next()).unwrap_or("145");
+        format!("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{major}.0.0.0 Safari/537.36")
+    }
+}

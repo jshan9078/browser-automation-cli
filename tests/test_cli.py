@@ -27,8 +27,11 @@ SOCK = Path.home() / ".browser-daemon" / "socket"
 ENV = {**os.environ, "PYTHONPATH": str(ROOT), "BROWSER_FREEZE_AFTER": "1"}
 
 
+CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]  # e.g. BROWSER_CLI=rust/target/release/browser
+
+
 def cli(*args, stdin=None):
-    p = subprocess.run([PY, "-m", "cli.main", *args], capture_output=True, text=True, env=ENV, input=stdin)
+    p = subprocess.run([*CLI, *args], capture_output=True, text=True, env=ENV, input=stdin)
     return p.returncode, p.stdout, p.stderr
 
 
@@ -43,12 +46,13 @@ def jcli(*args):
 class DaemonTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["pkill", "-f", "daemon.server"], capture_output=True)
-        while subprocess.run(["pgrep", "-f", "daemon.server"], capture_output=True).returncode == 0:
+        subprocess.run(["pkill", "-f", "daemon.server|browser-daemon"], capture_output=True)
+        while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0:
             time.sleep(0.1)
         SOCK.unlink(missing_ok=True)  # stale socket from a killed daemon
         cls.site = subprocess.Popen([PY, str(SITE / "server.py"), str(PORT)])
-        cls.daemon = subprocess.Popen([PY, "-m", "daemon.server"], env=ENV, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        daemon_cmd = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.server"]  # e.g. rust/target/release/browser-daemon
+        cls.daemon = subprocess.Popen(daemon_cmd, env=ENV, stdout=subprocess.DEVNULL, stderr=open("/tmp/test-daemon.log", "w"))
         deadline = time.time() + 15
         while not SOCK.exists() and time.time() < deadline:
             time.sleep(0.05)

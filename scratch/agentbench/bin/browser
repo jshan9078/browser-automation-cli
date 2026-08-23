@@ -3,7 +3,7 @@
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 LOG="${AGENTBENCH_LOG:-$ROOT/scratch/agentbench/results/calls.log}"
 start=$(python3 -c 'import time;print(time.time())')
-out=$(PYTHONPATH="$ROOT" "$ROOT/.venv/bin/python" -m cli.main "$@" 2>/tmp/agentbench.err); rc=$?
+if [ -n "$BROWSER_CLI" ]; then out=$($BROWSER_CLI "$@" 2>/tmp/agentbench.err); rc=$?; else out=$(PYTHONPATH="$ROOT" "$ROOT/.venv/bin/python" -m cli.main "$@" 2>/tmp/agentbench.err); rc=$?; fi
 end=$(python3 -c 'import time;print(time.time())')
 python3 - "$LOG" "$start" "$end" "$rc" "${#out}" "$@" <<'PY'
 import json,sys

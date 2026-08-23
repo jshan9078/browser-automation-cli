@@ -1,10 +1,10 @@
 import json, subprocess, sys, time
 sys.argv, _a = sys.argv[:1], sys.argv; import run as r; sys.argv = _a
-subprocess.run(["pkill","-f","daemon.server"],capture_output=True)
-while subprocess.run(["pgrep","-f","daemon.server"],capture_output=True).returncode==0: time.sleep(0.1)
+subprocess.run(["pkill","-f","daemon.server|browser-daemon"],capture_output=True)
+while subprocess.run(["pgrep","-f","daemon.server|browser-daemon"],capture_output=True).returncode==0: time.sleep(0.1)
 r.SOCK.unlink(missing_ok=True)
 site = subprocess.Popen([r.PY, str(r.SITE/"server.py"), "8765"])
-d = subprocess.Popen([r.PY,"-m","daemon.server"],env=r.ENV,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+d = subprocess.Popen(r.DAEMON,env=r.ENV,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 while not r.SOCK.exists(): time.sleep(0.05)
 time.sleep(0.3)
 sid = r.cli("create","--show")[1].strip(); print("shown session", sid)

@@ -167,6 +167,18 @@ Errors (exit code 1):
 
 Share [`SKILL.md`](SKILL.md) with your coding agent harness; see [AGENTS.md](AGENTS.md) for the integration guide.
 
+## Rust implementation (preview)
+
+`rust/` contains a Rust client and daemon with the same CLI and socket protocol — no Python, Playwright or
+Node at runtime (Chromium from `browser install` or `BROWSER_CHROME_PATH` is still required). Per-call
+overhead 40 ms → 2 ms, daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See OPTIMIZATION.md §7.
+
+```bash
+cd rust && cargo build --release
+./target/release/browser-daemon &      # drop-in for the Python daemon
+./target/release/browser list
+```
+
 ## Development
 
 ```bash
