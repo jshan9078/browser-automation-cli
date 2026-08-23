@@ -1,0 +1,31 @@
+{
+  "task": "t2_archive_project",
+  "run": "haiku-2",
+  "success": true,
+  "answer": "Successfully archived the Orion project in the Acme Console.",
+  "visible": false,
+  "wall_s": 44.22,
+  "wall_total_s": 63.1,
+  "cli_calls": 11,
+  "failed_calls": 0,
+  "cli_time_s": 0.59,
+  "tool_output_tokens": 1662,
+  "snapshots": 7,
+  "screenshots": 1,
+  "daemon_cpu_s": 0.55,
+  "daemon_rss_mb": 376,
+  "agent_tokens": 36042,
+  "commands": [
+    "screenshot",
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot {\"all\": true}",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e6\", \"snap\": true}",
+    "click {\"selector\": \"@e47\", \"snap\": true}",
+    "click {\"selector\": \"@e61\", \"snap\": true}",
+    "click {\"selector\": \"@e67\", \"snap\": true}"
+  ]
+}

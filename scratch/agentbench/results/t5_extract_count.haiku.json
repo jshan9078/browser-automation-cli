@@ -1,0 +1,32 @@
+{
+  "task": "t5_extract_count",
+  "run": "haiku",
+  "success": true,
+  "answer": "6",
+  "visible": false,
+  "wall_s": 45.02,
+  "wall_total_s": 64.7,
+  "cli_calls": 12,
+  "failed_calls": 0,
+  "cli_time_s": 0.62,
+  "tool_output_tokens": 2195,
+  "snapshots": 5,
+  "screenshots": 1,
+  "daemon_cpu_s": 0.49,
+  "daemon_rss_mb": 373,
+  "agent_tokens": 37136,
+  "commands": [
+    "screenshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "batch batch:type,type,click",
+    "click {\"selector\": \"@e6\", \"snap\": true}",
+    "text",
+    "click {\"selector\": \"@e47\", \"snap\": true}",
+    "text",
+    "click {\"selector\": \"@e65\", \"snap\": true}",
+    "text",
+    "click {\"selector\": \"@e83\", \"snap\": true}",
+    "text"
+  ]
+}

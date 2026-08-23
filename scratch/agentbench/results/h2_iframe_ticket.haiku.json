@@ -1,0 +1,31 @@
+{
+  "task": "h2_iframe_ticket",
+  "run": "haiku",
+  "success": true,
+  "answer": "Support ticket submitted with subject Turnstile widget not rendering, priority High, and a brief description.",
+  "visible": false,
+  "wall_s": 44.19,
+  "wall_total_s": 63.3,
+  "cli_calls": 11,
+  "failed_calls": 0,
+  "cli_time_s": 0.48,
+  "tool_output_tokens": 812,
+  "snapshots": 5,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.57,
+  "daemon_rss_mb": 365,
+  "agent_tokens": 33560,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e15\", \"snap\": true}",
+    "type {\"selector\": \"@e27\", \"text_value\": \"Turnstile widget not ren",
+    "select_option {\"selector\": \"@e28\", \"value\": \"High\"}",
+    "type {\"selector\": \"@e29\", \"text_value\": \"The Turnstile widget is ",
+    "click {\"selector\": \"@e30\", \"snap\": true}"
+  ]
+}

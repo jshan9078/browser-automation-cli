@@ -1,0 +1,30 @@
+{
+  "task": "h3_shadow_flags",
+  "run": "haiku",
+  "success": true,
+  "answer": "Feature flags updated: New dashboard turned ON, others unchanged, saved.",
+  "visible": false,
+  "wall_s": 38.53,
+  "wall_total_s": 68.3,
+  "cli_calls": 10,
+  "failed_calls": 0,
+  "cli_time_s": 0.62,
+  "tool_output_tokens": 1129,
+  "snapshots": 9,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.47,
+  "daemon_rss_mb": 361,
+  "agent_tokens": 33000,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"snap\": true, \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"snap\": true, \"text_value\": \"correct-hor",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e10\", \"snap\": true}",
+    "click {\"selector\": \"@e27\", \"snap\": true}",
+    "click {\"selector\": \"@e30\", \"snap\": true}"
+  ]
+}

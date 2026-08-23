@@ -1,0 +1,31 @@
+{
+  "task": "t4_rename",
+  "run": "haiku-2",
+  "success": true,
+  "answer": "Project Atlas renamed to Atlas v2 and saved.",
+  "visible": false,
+  "wall_s": 40.95,
+  "wall_total_s": 59.1,
+  "cli_calls": 11,
+  "failed_calls": 0,
+  "cli_time_s": 0.62,
+  "tool_output_tokens": 1637,
+  "snapshots": 7,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.62,
+  "daemon_rss_mb": 373,
+  "agent_tokens": 35071,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e6\", \"snap\": true}",
+    "click {\"selector\": \"@e30\", \"snap\": true}",
+    "press_key {\"key\": \"Control+a\", \"selector\": \"@e48\"}",
+    "type {\"selector\": \"@e48\", \"snap\": true, \"text_value\": \"Atlas v2\"}",
+    "click {\"selector\": \"@e49\", \"snap\": true}"
+  ]
+}

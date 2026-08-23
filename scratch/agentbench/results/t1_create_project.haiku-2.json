@@ -1,0 +1,33 @@
+{
+  "task": "t1_create_project",
+  "run": "haiku-2",
+  "success": true,
+  "answer": "Successfully created project zera-web with hostname zera.example.com and widget mode Non-interactive; appears in Projects list.",
+  "visible": false,
+  "wall_s": 52.11,
+  "wall_total_s": 71.2,
+  "cli_calls": 13,
+  "failed_calls": 1,
+  "cli_time_s": 0.71,
+  "tool_output_tokens": 1718,
+  "snapshots": 8,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.72,
+  "daemon_rss_mb": 370,
+  "agent_tokens": 35451,
+  "commands": [
+    "snapshot",
+    "navigate {\"snap\": true, \"url\": \"--url\"}",
+    "navigate {\"snap\": true, \"url\": \"http://127.0.0.1:8790/\"}",
+    "batch batch:type,type,click,wait",
+    "snapshot {\"all\": true}",
+    "click {\"selector\": \"@e16\", \"snap\": true}",
+    "batch batch:type,type,click,wait",
+    "snapshot {\"all\": true}",
+    "select_option {\"selector\": \"@e33\", \"snap\": true, \"value\": \"Non-interactive",
+    "click {\"selector\": \"@e35\", \"snap\": true}",
+    "text",
+    "batch batch:type,click,wait",
+    "text"
+  ]
+}

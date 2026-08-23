@@ -1,0 +1,25 @@
+{
+  "task": "h3_shadow_flags",
+  "run": "haiku-2",
+  "success": true,
+  "answer": "Successfully enabled the New dashboard feature flag and saved the changes.",
+  "visible": false,
+  "wall_s": 23.01,
+  "wall_total_s": 42.6,
+  "cli_calls": 5,
+  "failed_calls": 0,
+  "cli_time_s": 0.48,
+  "tool_output_tokens": 948,
+  "snapshots": 3,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.42,
+  "daemon_rss_mb": 359,
+  "agent_tokens": 33097,
+  "commands": [
+    "snapshot",
+    "navigate {\"snap\": true, \"url\": \"http://127.0.0.1:8790/\"}",
+    "batch batch:type,type,click",
+    "click {\"selector\": \"@e10\", \"snap\": true}",
+    "batch batch:click,click"
+  ]
+}

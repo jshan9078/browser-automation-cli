@@ -1,0 +1,28 @@
+{
+  "task": "t6_extract_account",
+  "run": "haiku-2",
+  "success": true,
+  "answer": "ops-admin@acme-internal.test",
+  "visible": false,
+  "wall_s": 22.64,
+  "wall_total_s": 42.3,
+  "cli_calls": 8,
+  "failed_calls": 0,
+  "cli_time_s": 0.28,
+  "tool_output_tokens": 348,
+  "snapshots": 3,
+  "screenshots": 1,
+  "daemon_cpu_s": 1.26,
+  "daemon_rss_mb": 362,
+  "agent_tokens": 32519,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\"}",
+    "snapshot",
+    "screenshot"
+  ]
+}

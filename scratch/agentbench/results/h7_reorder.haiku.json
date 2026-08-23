@@ -1,0 +1,28 @@
+{
+  "task": "h7_reorder",
+  "run": "haiku",
+  "success": true,
+  "answer": "Security patches has been moved to the top of the Priorities list and saved.",
+  "visible": false,
+  "wall_s": 30.38,
+  "wall_total_s": 50.6,
+  "cli_calls": 8,
+  "failed_calls": 0,
+  "cli_time_s": 0.65,
+  "tool_output_tokens": 1236,
+  "snapshots": 5,
+  "screenshots": 0,
+  "daemon_cpu_s": 0.51,
+  "daemon_rss_mb": 364,
+  "agent_tokens": 33887,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "batch batch:type,type,click",
+    "click {\"selector\": \"@e11\", \"snap\": true}",
+    "snapshot {\"all\": true}",
+    "batch batch:click,press_key,press_key",
+    "click {\"selector\": \"@e38\", \"snap\": true}"
+  ]
+}

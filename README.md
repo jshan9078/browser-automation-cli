@@ -135,7 +135,7 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 * **Daemon** (`browser-daemon`): Unix socket server (`~/.browser-daemon/socket`, mode 600) owning a headless Chromium, plus a headed one that exists only while some session is `show`n.
 * **CLI** (`browser`): ~40 ms per call, no Playwright import on the daemon path.
 * **Sessions**: one isolated browser context each. Hidden sessions are **frozen** after 10 s idle (script execution paused, ~3% CPU on animated dashboards; callbacks that fire while frozen are dropped, so `BROWSER_FREEZE_AFTER=0` disables it) and **hibernated** to `~/.browser-daemon/sessions/<id>.json` (cookies + storage + URL) after 10 min idle or on shutdown; they are rehydrated transparently on the next command. Tune with `BROWSER_FREEZE_AFTER` / `BROWSER_HIBERNATE_AFTER` (seconds).
-* **Resource profile** (M4, Cloudflare dashboard parked in a session): 2% CPU / 1.1 GB vs 264% CPU / 2.1 GB for v0.2. See [OPTIMIZATION.md](OPTIMIZATION.md) for the measurements.
+* **Resource profile** (M4, Cloudflare dashboard parked in a session): 2% CPU / 1.1 GB vs 264% CPU / 2.1 GB for v0.2. See [AGENTBENCH.md](AGENTBENCH.md) for the measurements.
 
 ## Anti-Detection
 
@@ -173,7 +173,7 @@ Share [`SKILL.md`](SKILL.md) with your coding agent harness; see [AGENTS.md](AGE
 `rust/` contains a Rust client and daemon with the same CLI and socket protocol — no Python, Playwright or
 Node at all: `browser install` downloads the same Chrome-for-Testing build Playwright pins (into the same
 cache, so both implementations share it), and `capture` is native too. Per-call overhead 40 ms → 2 ms,
-daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See OPTIMIZATION.md §7. Published to PyPI as
+daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See AGENTBENCH.md. Published to PyPI as
 0.4.0 under the same name (wheels for Linux x86_64/aarch64, macOS arm64/x86_64).
 
 ```bash

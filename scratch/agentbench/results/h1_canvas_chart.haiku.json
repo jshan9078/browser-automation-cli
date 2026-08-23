@@ -1,0 +1,31 @@
+{
+  "task": "h1_canvas_chart",
+  "run": "haiku",
+  "success": true,
+  "answer": "eu-central",
+  "visible": false,
+  "wall_s": 38.76,
+  "wall_total_s": 59.8,
+  "cli_calls": 11,
+  "failed_calls": 1,
+  "cli_time_s": 0.39,
+  "tool_output_tokens": 596,
+  "snapshots": 5,
+  "screenshots": 2,
+  "daemon_cpu_s": 0.49,
+  "daemon_rss_mb": 373,
+  "agent_tokens": 35235,
+  "commands": [
+    "snapshot",
+    "navigate {\"url\": \"http://127.0.0.1:8790/\"}",
+    "snapshot",
+    "snapshot",
+    "screenshot",
+    "eval {\"expression\": \"document.querySelector(\\\"input[placeholder=\\",
+    "type {\"selector\": \"@e1\", \"text_value\": \"ops-admin\"}",
+    "type {\"selector\": \"@e2\", \"text_value\": \"correct-horse\"}",
+    "click {\"selector\": \"@e3\", \"snap\": true}",
+    "click {\"selector\": \"@e8\", \"snap\": true}",
+    "screenshot"
+  ]
+}
