@@ -89,8 +89,9 @@ browser shutdown              # stop the daemon; sessions are saved and restored
 
 ```bash
 browser capture <url> [-f] [-o <path>]     # headless viewport screenshot (-f = full page)
-browser install                            # download Chromium (~170 MB)
+browser install [--headless-only]          # download Chromium (Chrome for Testing, ~550 MB; half with --headless-only)
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
+browser docs [skill|agents]                # print SKILL.md / AGENTS.md (shipped in the binary)
 ```
 
 ### Sessions
@@ -178,8 +179,7 @@ daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See AGENTBENCH.md. P
 
 ```bash
 cd rust && cargo build --release
-./target/release/browser-daemon &      # drop-in for the Python daemon
-./target/release/browser list
+./target/release/browser list          # the daemon auto-starts (`browser daemon` runs it in the foreground)
 ```
 
 ## Development
@@ -196,7 +196,7 @@ uv sync
 | Symptom | Fix |
 | :-- | :-- |
 | `Command not found: browser` | `export PATH="$HOME/.local/bin:$PATH"` |
-| `Daemon not running` | `browser-daemon` |
+| `Daemon not running` | Auto-start was disabled or failed — `browser daemon &`, check `~/.browser-daemon/daemon.log` |
 | Browser doesn't launch | `browser install` |
 | `Session not found` | `browser list` |
 | `ref @eN is unknown or stale` | Page changed; run `snapshot` again |
