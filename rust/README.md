@@ -41,11 +41,10 @@ Nothing visible opens: the daemon runs Chromium headless. Manage it yourself wit
 ### 2. Log in when a site needs it
 
 ```bash
-browser create            # headless session
 browser create --show     # opens a window so you can log in; `browser <id> hide` afterwards
 ```
 
-A session is an isolated browser profile (cookies, storage). Log into any sites you need while it is shown; the agent can drive it hidden afterwards. Sessions survive daemon restarts.
+A session is an isolated browser profile (cookies, storage). Log into any sites you need while the window is shown; the agent drives it hidden afterwards. Sessions survive daemon restarts.
 
 ### 3. Run browser actions
 
