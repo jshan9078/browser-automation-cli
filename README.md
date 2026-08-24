@@ -88,7 +88,8 @@ browser shutdown              # stop the daemon; sessions are saved and restored
 
 ```bash
 browser capture <url> [-f] [-o <path>]     # headless viewport screenshot (-f = full page)
-browser install [--headless-only]          # download Chromium (Chrome for Testing, ~550 MB; half with --headless-only)
+browser install [--all]                    # download headless Chromium (Chrome for Testing, ~196 MB);
+                                           # the headed build (~356 MB) downloads on first `show`, or now with --all
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
 browser docs [skill|agents]                # print SKILL.md / AGENTS.md (shipped in the binary)
 ```

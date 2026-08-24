@@ -71,6 +71,10 @@ fn find_binary(dir: &Path, names: &[&str], depth: u32) -> Option<PathBuf> {
 }
 
 pub async fn launch(headless: bool) -> Result<Browser, String> {
+    if find_executable(headless).is_err() {
+        // e.g. headless-only install and the first `show`: fetch the missing build now
+        tokio::task::spawn_blocking(move || crate::install::ensure(headless)).await.map_err(|e| e.to_string())??;
+    }
     let exe = find_executable(headless)?;
     let user_data = std::env::temp_dir().join(format!("browser-daemon-{}-{}", if headless { "headless" } else { "headed" }, std::process::id()));
     let mut cmd = Command::new(&exe);

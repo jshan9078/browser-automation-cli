@@ -29,7 +29,7 @@ browser abc12345 type --label "Username or email address" octocat
 browser abc12345 click --text "Sign in" -s     # -s: return a fresh snapshot with the result
 ```
 
-If a site needs the **user** to log in: `browser abc12345 show` (a window opens), ask the user to log in, then `browser abc12345 hide`. Never ask for credentials.
+If a site needs the **user** to log in: `browser abc12345 show` (a window opens; on very first use this downloads the headed browser, ~356 MB), ask the user to log in, then `browser abc12345 hide`. Never ask for credentials.
 
 ## Session Model
 
@@ -48,7 +48,8 @@ If a site needs the **user** to log in: `browser abc12345 show` (a window opens)
 
 ```bash
 browser capture <url> [-f] [-o path]   # headless JPEG screenshot (viewport; -f full page)
-browser install [--headless-only]      # download Chromium (Chrome for Testing; ~550 MB, half with --headless-only)
+browser install [--all]                # download headless Chromium (~196 MB); the headed build (~356 MB)
+                                       # auto-downloads on the first `show` / `create --show`
 browser cleanup                        # kill Chromium processes launched by this tool
 browser --version | update             # show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
 browser docs skill|agents              # print the skill file / this guide (also shipped in the binary)

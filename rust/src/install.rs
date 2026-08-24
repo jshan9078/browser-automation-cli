@@ -34,7 +34,9 @@ fn builds(headless_only: bool) -> Result<Vec<Build>, String> {
 }
 
 pub fn run(args: &[String]) -> Result<(), String> {
-    let headless_only = args.iter().any(|a| a == "--headless-only");
+    // Headless-only by default (~196 MB): agents never need a window. The headed build (~356 MB)
+    // is fetched lazily on the first `show` / `create --show`, or up front with --all.
+    let headless_only = !args.iter().any(|a| a == "--all" || a == "--full");
     let force = args.iter().any(|a| a == "--force");
     let cache = cache_dir();
     fs::create_dir_all(&cache).map_err(|e| format!("create {}: {e}", cache.display()))?;
@@ -57,7 +59,30 @@ pub fn run(args: &[String]) -> Result<(), String> {
         eprintln!("Installed {}", b.label);
     }
     let exe = crate::chrome::find_executable(true)?;
+    if headless_only {
+        eprintln!("Headed Chromium (for `create --show` login windows) will be downloaded automatically on first use; get it now with `browser install --all`.");
+    }
     println!("{{\"success\": true, \"chromium\": \"{}\", \"version\": \"{VERSION}\"}}", exe.display());
+    Ok(())
+}
+
+/// Install the build needed for `headless` if no usable executable exists yet (lazy path for `show`).
+pub fn ensure(headless: bool) -> Result<(), String> {
+    if crate::chrome::find_executable(headless).is_ok() { return Ok(()); }
+    eprintln!("[daemon] no {} Chromium found; downloading it now (one-time)...", if headless { "headless" } else { "headed" });
+    let cache = cache_dir();
+    fs::create_dir_all(&cache).map_err(|e| e.to_string())?;
+    let all = builds(false)?;
+    let b = if headless { &all[0] } else { &all[1] };
+    let dest = cache.join(format!("{}-{REVISION}", b.dir));
+    let zip_path = cache.join(format!("{}-{REVISION}.zip", b.dir));
+    download(&b.url, &zip_path)?;
+    let _ = fs::remove_dir_all(&dest);
+    fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
+    unzip(&zip_path, &dest)?;
+    let _ = fs::remove_file(&zip_path);
+    fs::write(dest.join("INSTALLATION_COMPLETE"), "").map_err(|e| e.to_string())?;
+    fs::write(dest.join("DEPENDENCIES_VALIDATED"), "").ok();
     Ok(())
 }
 

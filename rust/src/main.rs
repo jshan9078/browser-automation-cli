@@ -12,7 +12,8 @@ const HELP: &str = r##"browser — authenticated browser automation for coding a
 
 Standalone (no daemon):
   browser capture <url> [-f] [-o path]   Headless screenshot (viewport; -f full page)
-  browser install [--headless-only]      Download Chromium (Chrome for Testing, same build Playwright pins)
+  browser install [--all]                Download headless Chromium (~196 MB; --all adds the headed build,
+                                         otherwise it is fetched automatically on first `show`)
   browser cleanup                        Kill Chromium processes started by this tool
   browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
   browser docs [skill|agents]            Print the agent skill file / integration guide (shipped in the binary)

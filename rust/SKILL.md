@@ -30,7 +30,7 @@ browser capture http://localhost:3000
 ## Setup Checklist
 
 ```bash
-uv tool install browser-automation-cli && browser install    # one-time; install downloads Chromium (~550 MB, --headless-only for half)
+uv tool install browser-automation-cli && browser install    # one-time; downloads headless Chromium (~196 MB)
 export PATH="$HOME/.local/bin:$PATH"                         # if commands are not found
 # the daemon auto-starts on the first command (run `browser daemon &` yourself to manage it; BROWSER_NO_AUTOSTART=1 disables)
 browser create                                               # prints session id
@@ -50,7 +50,7 @@ If a site needs login: `browser <id> show` → ask the user to log in in the win
 ## Command Reference
 
 ```bash
-browser install [--headless-only]       # download Chromium (Chrome for Testing); no Python needed
+browser install [--all]                 # download headless Chromium; headed build auto-downloads on first `show`
 browser --version | update              # show version / upgrade (daily check; BROWSER_NO_UPDATE_CHECK=1 disables)
 browser docs skill|agents               # print this skill file / the agent integration guide
 browser create [--show]                 # new session (--show opens a window for login)
