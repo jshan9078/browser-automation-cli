@@ -37,6 +37,15 @@ jobs:
           BROWSER_DAEMON: ${{ github.workspace }}/rust/target/release/browser-daemon
           PYTHONPATH: ${{ github.workspace }}
         run: uv run python -m unittest -v tests/test_cli.py
+      - name: End-to-end tests again with engine=system (the runner's installed Chrome)
+        env:
+          BROWSER_CLI: ${{ github.workspace }}/rust/target/release/browser
+          BROWSER_DAEMON: ${{ github.workspace }}/rust/target/release/browser-daemon
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          rust/target/release/browser engine system
+          uv run python -m unittest tests/test_cli.py
+          rust/target/release/browser engine auto
       - name: Daemon log on failure
         if: failure()
         run: cat /tmp/test-daemon.log || true
