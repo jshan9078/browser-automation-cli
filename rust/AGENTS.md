@@ -52,7 +52,7 @@ browser install [--all]                # download headless Chromium (~196 MB); t
                                        # auto-downloads on the first `show` / `create --show`
 browser cleanup                        # kill Chromium processes launched by this tool
 browser --version | update             # show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
-browser docs skill|agents              # print the skill file / this guide (also shipped in the binary)
+browser install skill [target...]      # install the skill into Claude Code / Codex / OpenCode (auto-detects)
 ```
 
 ### Sessions

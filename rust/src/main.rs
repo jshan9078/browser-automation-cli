@@ -16,7 +16,8 @@ Standalone (no daemon):
                                          otherwise it is fetched automatically on first `show`)
   browser cleanup                        Kill Chromium processes started by this tool
   browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
-  browser docs [skill|agents]            Print the agent skill file / integration guide (shipped in the binary)
+  browser install skill [target...]      Install the agent skill (SKILL.md) into Claude Code / Codex /
+                                         OpenCode skill directories (all detected when no target given)
 
 Daemon (auto-started on first use; run it yourself with `browser daemon`; BROWSER_NO_AUTOSTART=1 disables auto-start):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -360,6 +361,53 @@ fn autospawn_daemon() -> Result<(), String> {
 
 static AUTOSTART: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 
+/// `browser install skill [claude|codex|opencode|<dir>...]` — write the bundled SKILL.md into the
+/// agents' skill directories (all detected ones when no target is given).
+fn install_skill(args: &[String]) -> i32 {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let home = std::path::Path::new(&home);
+    let known: &[(&str, std::path::PathBuf, std::path::PathBuf)] = &[
+        ("claude-code", home.join(".claude"), home.join(".claude/skills")),
+        ("codex", home.join(".codex"), home.join(".codex/skills")),
+        ("opencode", home.join(".config/opencode"), home.join(".config/opencode/skills")),
+    ];
+    let mut targets: Vec<(String, std::path::PathBuf)> = Vec::new();
+    if args.is_empty() {
+        for (name, marker, dir) in known {
+            if marker.exists() { targets.push((name.to_string(), dir.clone())); }
+        }
+        if targets.is_empty() {
+            eprintln!("No agent directories found (~/.claude, ~/.codex, ~/.config/opencode).");
+            eprintln!("Pick one explicitly: browser install skill claude|codex|opencode, or pass a skills directory path.");
+            return 1;
+        }
+    } else {
+        for a in args {
+            match a.as_str() {
+                "claude" | "claude-code" => targets.push(("claude-code".into(), known[0].2.clone())),
+                "codex" => targets.push(("codex".into(), known[1].2.clone())),
+                "opencode" => targets.push(("opencode".into(), known[2].2.clone())),
+                p => targets.push((p.to_string(), std::path::PathBuf::from(shellexpand_home(p, home)))),
+            }
+        }
+    }
+    let mut installed = Vec::new();
+    for (name, dir) in targets {
+        let d = dir.join("browser-cli");
+        if let Err(e) = std::fs::create_dir_all(&d) { eprintln!("{name}: create {}: {e}", d.display()); return 1; }
+        let f = d.join("SKILL.md");
+        if let Err(e) = std::fs::write(&f, include_str!("../SKILL.md")) { eprintln!("{name}: write {}: {e}", f.display()); return 1; }
+        eprintln!("Installed skill for {name}: {}", f.display());
+        installed.push(json!({"agent": name, "path": f.to_string_lossy()}));
+    }
+    println!("{}", serde_json::to_string_pretty(&json!({"success": true, "installed": installed, "note": "restart the agent (or start a new session) to pick up the skill"})).unwrap());
+    0
+}
+
+fn shellexpand_home(p: &str, home: &std::path::Path) -> String {
+    if let Some(rest) = p.strip_prefix("~/") { home.join(rest).to_string_lossy().into_owned() } else { p.to_string() }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "-h" || args[0] == "--help" { print!("{HELP}"); update_notice(); return; }
@@ -373,16 +421,9 @@ fn main() {
     if cmd == "shutdown" { AUTOSTART.store(false, std::sync::atomic::Ordering::SeqCst); }
     let code = match cmd {
         "capture" => capture(&args[1..]),
+        "install" if args.get(1).map(String::as_str) == Some("skill") => install_skill(&args[2..]),
         "install" => match browser_cli::install::run(&args[1..]) { Ok(()) => 0, Err(e) => { eprintln!("{}", err_json(&e)); 1 } },
         "update" => update_cmd(),
-        "docs" => {
-            // shipped with the binary so an installed tool is self-documenting for agents
-            match args.get(1).map(String::as_str) {
-                Some("agents") => print!("{}", include_str!("../AGENTS.md")),
-                _ => print!("{}", include_str!("../SKILL.md")),
-            }
-            0
-        }
         "cleanup" => cleanup(),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));

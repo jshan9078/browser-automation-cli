@@ -91,7 +91,7 @@ browser capture <url> [-f] [-o <path>]     # headless viewport screenshot (-f = 
 browser install [--all]                    # download headless Chromium (Chrome for Testing, ~196 MB);
                                            # the headed build (~356 MB) downloads on first `show`, or now with --all
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
-browser docs [skill|agents]                # print SKILL.md / AGENTS.md (shipped in the binary)
+browser install skill                      # install the agent skill into Claude Code / Codex / OpenCode
 ```
 
 ### Sessions

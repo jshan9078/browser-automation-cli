@@ -36,7 +36,7 @@ export PATH="$HOME/.local/bin:$PATH"                         # if commands are n
 browser create                                               # prints session id
 ```
 
-This document is also available offline after install: `browser docs skill` (and `browser docs agents`).
+Install this skill into an agent with `browser install skill` (Claude Code, Codex and OpenCode are auto-detected).
 
 If a site needs login: `browser <id> show` → ask the user to log in in the window → `browser <id> hide`. Never ask for credentials.
 
@@ -52,7 +52,7 @@ If a site needs login: `browser <id> show` → ask the user to log in in the win
 ```bash
 browser install [--all]                 # download headless Chromium; headed build auto-downloads on first `show`
 browser --version | update              # show version / upgrade (daily check; BROWSER_NO_UPDATE_CHECK=1 disables)
-browser docs skill|agents               # print this skill file / the agent integration guide
+browser install skill [target...]       # install this skill into Claude Code / Codex / OpenCode
 browser create [--show]                 # new session (--show opens a window for login)
 browser list [--table]                  # JSON list with state/visible
 browser <id> show | hide | delete
