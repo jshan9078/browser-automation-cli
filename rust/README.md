@@ -30,15 +30,15 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## Quick Start
 
-### 1. Start the daemon
+### 1. Create a session (the daemon auto-starts)
 
 ```bash
-browser create   # the daemon auto-starts on first use (0.5.0+)
+browser create   # first command starts the daemon in the background (0.5.0+)
 ```
 
-Nothing visible opens: the daemon runs Chromium headless in the background. Run it yourself with `browser daemon` (or the legacy `browser-daemon` alias) if you prefer; `BROWSER_NO_AUTOSTART=1` disables auto-start.
+Nothing visible opens: the daemon runs Chromium headless. Manage it yourself with `browser daemon` (or the legacy `browser-daemon` alias) if you prefer; `BROWSER_NO_AUTOSTART=1` disables auto-start.
 
-### 2. Create a session
+### 2. Log in when a site needs it
 
 ```bash
 browser create            # headless session
