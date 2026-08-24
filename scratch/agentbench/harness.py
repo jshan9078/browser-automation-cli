@@ -67,7 +67,7 @@ Run `browser --help` once if you need the command reference. A session already e
 Work efficiently: prefer snapshot refs (@eN) and --text/--label targets, use `-s` to get a snapshot with an action, and `batch` for known sequences. Do not create or delete sessions. When done, reply with a one-line summary (and `ANSWER: ...` as the last line if asked)."""
 
 def ensure_daemon():
-    def alive(): return subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0
+    def alive(): return subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True).returncode == 0
     if alive() and not SOCK.exists():  # a daemon is shutting down; let it finish
         for _ in range(100):
             if not alive(): break
@@ -82,7 +82,7 @@ def ensure_daemon():
         subprocess.Popen([PY, str(HERE / "app/server.py"), str(PORT)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); time.sleep(0.5)
 
 def daemon_pid():
-    out = subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True, text=True).stdout.split()
+    out = subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True, text=True).stdout.split()
     return int(out[0]) if out else None
 
 def tree_cpu(pid):

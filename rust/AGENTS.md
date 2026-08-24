@@ -22,8 +22,7 @@ If `browser` or `browser-daemon` is not found: `export PATH="$HOME/.local/bin:$P
 ## Quick Start
 
 ```bash
-browser-daemon &                 # 1. start once; headless, nothing opens
-browser create                   # 2. prints an 8-char session id, e.g. abc12345
+browser create                   # 1. prints an 8-char session id; the daemon auto-starts on first use
 browser abc12345 navigate https://github.com/login
 browser abc12345 snapshot        # 3. see what is on the page
 browser abc12345 type --label "Username or email address" octocat
@@ -153,7 +152,7 @@ snapshot_text = r.stdout            # success: snapshot text; failure: JSON with
 
 | Symptom | Fix |
 |---------|-----|
-| `Daemon not running` | Start `browser-daemon` |
+| `Daemon not running` | Auto-start was disabled or failed — run `browser daemon &` (see ~/.browser-daemon/daemon.log) |
 | `Session not found` | `browser list` |
 | `ref @eN is unknown or stale` | `snapshot` again |
 | `strict mode violation` | Use `@ref`, `--text`, or a tighter selector |

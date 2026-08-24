@@ -3,8 +3,8 @@ import json, os, subprocess, sys, time
 sys.argv, _a = sys.argv[:1], sys.argv; import run as r; sys.argv = _a
 label = sys.argv[1]
 URLS = ["https://dash.cloudflare.com/login", "https://github.com/login", "https://news.ycombinator.com", "https://en.wikipedia.org/wiki/Playwright_(software)"]
-subprocess.run(["pkill", "-f", "daemon.server|browser-daemon"], capture_output=True)
-while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0: time.sleep(0.1)
+subprocess.run(["pkill", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True)
+while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True).returncode == 0: time.sleep(0.1)
 d = subprocess.Popen(r.DAEMON, env=r.ENV, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 while not r.SOCK.exists(): time.sleep(0.05)
 time.sleep(0.3)

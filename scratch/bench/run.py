@@ -67,8 +67,8 @@ def main():
     label = sys.argv[1]; iters = int(sys.argv[2]) if len(sys.argv) > 2 else 3
     # --- start site + daemon
     site = subprocess.Popen([PY, str(SITE / "server.py"), str(PORT)])
-    subprocess.run(["pkill", "-f", "daemon.server|browser-daemon"], capture_output=True)
-    while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0: time.sleep(0.1)
+    subprocess.run(["pkill", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True)
+    while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True).returncode == 0: time.sleep(0.1)
     if SOCK.exists(): SOCK.unlink()
     t0 = time.perf_counter()
     daemon = subprocess.Popen(DAEMON, env=ENV, stdout=subprocess.DEVNULL, stderr=open(RESULTS / f"{label}.daemon.log", "w"))

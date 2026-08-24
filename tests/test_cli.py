@@ -46,8 +46,8 @@ def jcli(*args):
 class DaemonTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["pkill", "-f", "daemon.server|browser-daemon"], capture_output=True)
-        while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon"], capture_output=True).returncode == 0:
+        subprocess.run(["pkill", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True)
+        while subprocess.run(["pgrep", "-f", "daemon.server|browser-daemon|browser daemon"], capture_output=True).returncode == 0:
             time.sleep(0.1)
         SOCK.unlink(missing_ok=True)  # stale socket from a killed daemon
         cls.site = subprocess.Popen([PY, str(SITE / "server.py"), str(PORT)])

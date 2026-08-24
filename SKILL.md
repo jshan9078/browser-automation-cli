@@ -32,7 +32,7 @@ browser capture http://localhost:3000
 ```bash
 uv tool install browser-automation-cli && browser install    # one-time; install downloads Chromium (~550 MB, --headless-only for half)
 export PATH="$HOME/.local/bin:$PATH"                         # if commands are not found
-browser-daemon &                                             # must stay running; headless
+# the daemon auto-starts on the first command (run `browser daemon &` yourself to manage it; BROWSER_NO_AUTOSTART=1 disables)
 browser create                                               # prints session id
 ```
 
@@ -124,7 +124,7 @@ printf '%s\n' '{"cmd":"type @e4 My project"}' '{"cmd":"click --text Save"}' '{"c
 
 ## Quick Troubleshooting
 
-- `Daemon not running` → start `browser-daemon`.
+- `Daemon not running` → auto-start was disabled or failed; run `browser daemon &` and check ~/.browser-daemon/daemon.log.
 - `Session not found` → `browser list`.
 - `ref @eN is unknown or stale` → `snapshot` again.
 - `strict mode violation` → selector matched several elements; use a ref or `--text`.

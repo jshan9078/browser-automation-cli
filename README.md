@@ -33,10 +33,10 @@ export PATH="$HOME/.local/bin:$PATH"
 ### 1. Start the daemon
 
 ```bash
-browser-daemon
+browser create   # the daemon auto-starts on first use (0.5.0+)
 ```
 
-Nothing visible opens: the daemon runs Chromium headless. Keep this terminal running (or background it).
+Nothing visible opens: the daemon runs Chromium headless in the background. Run it yourself with `browser daemon` (or the legacy `browser-daemon` alias) if you prefer; `BROWSER_NO_AUTOSTART=1` disables auto-start.
 
 ### 2. Create a session
 

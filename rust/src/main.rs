@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::process::{exit, Command, Stdio};
 use std::time::Duration;
+use std::os::unix::net::UnixStream as StdUnixStream;
 
 const HELP: &str = r##"browser — authenticated browser automation for coding agents
 
@@ -16,7 +17,7 @@ Standalone (no daemon):
   browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
   browser docs [skill|agents]            Print the agent skill file / integration guide (shipped in the binary)
 
-Daemon (start with: browser-daemon):
+Daemon (auto-started on first use; run it yourself with `browser daemon`; BROWSER_NO_AUTOSTART=1 disables auto-start):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
   browser list [--table]                 Sessions as JSON (--table for humans)
   browser <id> show | hide               Move the session to a visible window / back to headless
@@ -69,8 +70,14 @@ fn send_request(req: &Value) -> Value {
             }
             Err(e) => {
                 last_err = match e.kind() {
-                    std::io::ErrorKind::NotFound => "Daemon not running. Start with: browser-daemon".into(),
-                    std::io::ErrorKind::ConnectionRefused => "Connection refused. Is another daemon running?".into(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused => {
+                        // no daemon: start one ourselves, once, unless disabled or shutting down
+                        use std::sync::atomic::Ordering;
+                        if AUTOSTART.swap(false, Ordering::SeqCst) && std::env::var("BROWSER_NO_AUTOSTART").is_err() {
+                            eprintln!("Starting browser-daemon (auto; BROWSER_NO_AUTOSTART=1 to disable)...");
+                            match autospawn_daemon() { Ok(()) => continue, Err(e2) => e2 }
+                        } else if e.kind() == std::io::ErrorKind::NotFound { "Daemon not running. Start with: browser daemon &".into() } else { "Connection refused. Is another daemon running?".into() }
+                    }
                     _ => e.to_string(),
                 };
                 if attempt < 4 { std::thread::sleep(Duration::from_millis(100)); }
@@ -334,11 +341,35 @@ fn update_cmd() -> i32 {
     } else { println!("Up to date ({}).", browser_cli::update::CURRENT); 0 }
 }
 
+/// Start the daemon detached, logging to ~/.browser-daemon/daemon.log, and wait for the socket.
+fn autospawn_daemon() -> Result<(), String> {
+    let dir = socket_path().parent().unwrap().to_path_buf();
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let log = std::fs::OpenOptions::new().create(true).append(true).open(dir.join("daemon.log")).map_err(|e| e.to_string())?;
+    let me = std::env::current_exe().map_err(|e| e.to_string())?;
+    std::process::Command::new(me).arg("daemon").arg("--auto")
+        .stdin(Stdio::null()).stdout(Stdio::null()).stderr(log)
+        .spawn().map_err(|e| format!("could not start the daemon: {e}"))?;
+    for _ in 0..150 {
+        if StdUnixStream::connect(socket_path()).is_ok() { return Ok(()); }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    Err("daemon did not come up within 15s; see ~/.browser-daemon/daemon.log".into())
+}
+
+static AUTOSTART: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "-h" || args[0] == "--help" { print!("{HELP}"); update_notice(); return; }
     if args[0] == "--version" || args[0] == "-V" || args[0] == "version" { let c = browser_cli::update::read_cache(); println!("{}", json!({"version": env!("CARGO_PKG_VERSION"), "client": "rust", "latest": browser_cli::update::cached_latest(), "checked_at": c["checked_at"]})); update_notice(); return; }
     let cmd = args[0].as_str();
+    if cmd == "daemon" {
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
+        if let Err(e) = rt.block_on(browser_cli::server::run()) { eprintln!("[daemon] fatal: {e}"); exit(1); }
+        return;
+    }
+    if cmd == "shutdown" { AUTOSTART.store(false, std::sync::atomic::Ordering::SeqCst); }
     let code = match cmd {
         "capture" => capture(&args[1..]),
         "install" => match browser_cli::install::run(&args[1..]) { Ok(()) => 0, Err(e) => { eprintln!("{}", err_json(&e)); 1 } },
