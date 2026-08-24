@@ -35,8 +35,37 @@ fn newest(prefix: &str) -> Option<PathBuf> {
     dirs.pop().map(|(_, p)| p)
 }
 
-pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
-    if let Ok(p) = std::env::var("BROWSER_CHROME_PATH") { return Ok(PathBuf::from(p)); }
+/// Engine choice persisted by `browser engine`: "managed" (pinned Chrome for Testing), "system"
+/// (an installed browser), an explicit binary path, or unset = auto (managed if cached, else system).
+pub fn config_engine() -> Option<String> {
+    let p = Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/config.json");
+    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(p).ok()?).ok()?;
+    v.get("engine")?.as_str().map(String::from)
+}
+
+/// Installed Chromium-family browsers, most preferred first.
+pub fn system_browsers() -> Vec<(String, PathBuf)> {
+    let mut out = Vec::new();
+    if cfg!(target_os = "macos") {
+        for (name, p) in [
+            ("Google Chrome", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+            ("Microsoft Edge", "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
+            ("Brave", "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"),
+            ("Chromium", "/Applications/Chromium.app/Contents/MacOS/Chromium"),
+            ("Vivaldi", "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi"),
+        ] { let pb = PathBuf::from(p); if pb.exists() { out.push((name.to_string(), pb)); } }
+    } else {
+        for name in ["google-chrome", "google-chrome-stable", "microsoft-edge", "brave-browser", "chromium", "chromium-browser"] {
+            for dir in ["/usr/bin", "/usr/local/bin", "/opt/homebrew/bin", "/snap/bin"] {
+                let pb = Path::new(dir).join(name);
+                if pb.exists() { out.push((name.to_string(), pb)); break; }
+            }
+        }
+    }
+    out
+}
+
+fn managed_executable(headless: bool) -> Option<PathBuf> {
     let arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
     let candidates: Vec<PathBuf> = if headless {
         newest("chromium_headless_shell-").into_iter().flat_map(|d| vec![
@@ -49,14 +78,22 @@ pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
         all.push(d.join("chrome-mac/Chromium.app/Contents/MacOS/Chromium"));
         all.push(d.join("chrome-linux64/chrome")); all.push(d.join("chrome-linux/chrome"));
     }
-    // anything else under the build dirs (e.g. Playwright's linux-arm64 layout): search by binary name
     for (prefix, names) in [("chromium_headless_shell-", &["chrome-headless-shell", "headless_shell"][..]), ("chromium-", &["Google Chrome for Testing", "chrome", "Chromium"][..])] {
         if headless != prefix.starts_with("chromium_headless") { continue; }
         if let Some(d) = newest(prefix) { if let Some(p) = find_binary(&d, names, 5) { all.push(p); } }
     }
-    all.push(PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"));
-    all.push(PathBuf::from("/usr/bin/google-chrome")); all.push(PathBuf::from("/usr/bin/chromium"));
-    all.into_iter().find(|p| p.exists()).ok_or_else(|| "No Chromium found. Run `browser install` (downloads Chrome for Testing, ~300 MB) or set BROWSER_CHROME_PATH.".into())
+    all.into_iter().find(|p| p.exists())
+}
+
+pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
+    if let Ok(p) = std::env::var("BROWSER_CHROME_PATH") { return Ok(PathBuf::from(p)); }
+    match config_engine().as_deref() {
+        Some("managed") => managed_executable(headless).ok_or_else(|| "engine=managed but no downloaded build; run `browser install`".into()),
+        Some("system") => system_browsers().into_iter().map(|(_, p)| p).next().ok_or_else(|| "engine=system but no installed Chromium-family browser found; run `browser engine managed` or install Chrome".into()),
+        Some(path) if path != "auto" => { let p = PathBuf::from(path); if p.exists() { Ok(p) } else { Err(format!("engine path {path} does not exist; fix with `browser engine <path>|system|managed`")) } }
+        _ => managed_executable(headless).or_else(|| system_browsers().into_iter().map(|(_, p)| p).next())
+            .ok_or_else(|| "No Chromium found. Run `browser install` (downloads Chrome for Testing, ~196 MB), install Chrome, or set BROWSER_CHROME_PATH.".into()),
+    }
 }
 
 fn find_binary(dir: &Path, names: &[&str], depth: u32) -> Option<PathBuf> {
@@ -95,6 +132,7 @@ pub async fn launch(headless: bool) -> Result<Browser, String> {
     let cdp = Cdp::connect(&ws).await?;
     let v = cdp.send(None, "Browser.getVersion", serde_json::json!({})).await?;
     let version = v.get("product").and_then(|p| p.as_str()).unwrap_or("Chrome/0").to_string();
+    eprintln!("[daemon] using {} ({})", exe.display(), version);
     Ok(Browser { cdp, child, headless, version, _user_data: user_data })
 }
 

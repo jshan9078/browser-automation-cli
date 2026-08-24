@@ -69,6 +69,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
 /// Install the build needed for `headless` if no usable executable exists yet (lazy path for `show`).
 pub fn ensure(headless: bool) -> Result<(), String> {
     if crate::chrome::find_executable(headless).is_ok() { return Ok(()); }
+    if matches!(crate::chrome::config_engine().as_deref(), Some("system") | Some(_)) && crate::chrome::config_engine().as_deref() != Some("managed") && crate::chrome::config_engine().is_some() {
+        return Err("engine is not 'managed'; not downloading. Fix with `browser engine managed` or install the configured browser.".into());
+    }
     eprintln!("[daemon] no {} Chromium found; downloading it now (one-time)...", if headless { "headless" } else { "headed" });
     let cache = cache_dir();
     fs::create_dir_all(&cache).map_err(|e| e.to_string())?;

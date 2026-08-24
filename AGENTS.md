@@ -50,6 +50,7 @@ If a site needs the **user** to log in: `browser abc12345 show` (a window opens;
 browser capture <url> [-f] [-o path]   # headless JPEG screenshot (viewport; -f full page)
 browser install [--all]                # download headless Chromium (~196 MB); the headed build (~356 MB)
                                        # auto-downloads on the first `show` / `create --show`
+browser engine [auto|managed|system|<path>]  # launch your installed Chrome/Edge/Brave instead (no download)
 browser cleanup                        # kill Chromium processes launched by this tool
 browser --version | update             # show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
 browser install skill [target...]      # install the skill into Claude Code / Codex / OpenCode (auto-detects)

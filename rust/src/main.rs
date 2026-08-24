@@ -18,6 +18,10 @@ Standalone (no daemon):
   browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
   browser install skill [target...]      Install the agent skill (SKILL.md) into Claude Code / Codex /
                                          OpenCode skill directories (all detected when no target given)
+  browser engine [auto|managed|system|<path>]
+                                         Which browser to launch: managed = pinned Chrome for Testing,
+                                         system = your installed Chrome/Edge/Brave/Chromium (no download),
+                                         auto (default) = managed if downloaded, else system
 
 Daemon (auto-started on first use; run it yourself with `browser daemon`; BROWSER_NO_AUTOSTART=1 disables auto-start):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -404,6 +408,33 @@ fn install_skill(args: &[String]) -> i32 {
     0
 }
 
+/// `browser engine [auto|managed|system|<path>]` — choose which browser binary the daemon launches.
+fn engine_cmd(args: &[String]) -> i32 {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let cfg_path = std::path::Path::new(&home).join(".browser-daemon/config.json");
+    if let Some(choice) = args.first() {
+        let value = match choice.as_str() {
+            "auto" => None,
+            "managed" | "system" => Some(choice.clone()),
+            p => {
+                let expanded = shellexpand_home(p, std::path::Path::new(&home));
+                if !std::path::Path::new(&expanded).exists() { eprintln!("no such file: {expanded}"); return 1; }
+                Some(expanded)
+            }
+        };
+        let mut cfg: Value = std::fs::read_to_string(&cfg_path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_else(|| json!({}));
+        match &value { Some(v) => { cfg["engine"] = json!(v); } None => { cfg.as_object_mut().map(|o| o.remove("engine")); } }
+        if let Some(d) = cfg_path.parent() { let _ = std::fs::create_dir_all(d); }
+        if let Err(e) = std::fs::write(&cfg_path, serde_json::to_string_pretty(&cfg).unwrap()) { eprintln!("write {}: {e}", cfg_path.display()); return 1; }
+        eprintln!("Engine set to {}. Restart the daemon to apply: browser shutdown", value.as_deref().unwrap_or("auto"));
+    }
+    let engine = browser_cli::chrome::config_engine().unwrap_or_else(|| "auto".into());
+    let detected: Vec<Value> = browser_cli::chrome::system_browsers().into_iter().map(|(n, p)| json!({"name": n, "path": p.to_string_lossy()})).collect();
+    let res = |h| browser_cli::chrome::find_executable(h).map(|p| json!(p.to_string_lossy())).unwrap_or(Value::Null);
+    println!("{}", serde_json::to_string_pretty(&json!({"engine": engine, "resolved": {"headless": res(true), "headed": res(false)}, "system_browsers": detected})).unwrap());
+    0
+}
+
 fn shellexpand_home(p: &str, home: &std::path::Path) -> String {
     if let Some(rest) = p.strip_prefix("~/") { home.join(rest).to_string_lossy().into_owned() } else { p.to_string() }
 }
@@ -424,6 +455,7 @@ fn main() {
         "install" if args.get(1).map(String::as_str) == Some("skill") => install_skill(&args[2..]),
         "install" => match browser_cli::install::run(&args[1..]) { Ok(()) => 0, Err(e) => { eprintln!("{}", err_json(&e)); 1 } },
         "update" => update_cmd(),
+        "engine" => engine_cmd(&args[1..]),
         "cleanup" => cleanup(),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));
