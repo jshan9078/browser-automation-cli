@@ -1,6 +1,6 @@
 # Browser Automation CLI
 
-> **If you are an LLM, see** **[AGENTS.md](https://github.com/jshan9078/browser-automation-cli/blob/main/AGENTS.md)** **for quick setup and usage instructions.**
+> **If you are an LLM using this tool, read [SKILL.md](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md)** — or run `browser install skill` to add it to Claude Code / Codex / OpenCode. ([AGENTS.md](AGENTS.md) is for agents developing this repo.)
 
 A lightweight, self-hosted browser automation tool with a background daemon and CLI client. Enables authenticated web automation, screenshots, compact page snapshots, and page interactions via simple CLI commands. Share the [`SKILL.md`](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md) file with your coding agent harness for seamless integration.
 
@@ -169,7 +169,7 @@ Errors (exit code 1):
 
 ## Using with Coding Agents
 
-Share [`SKILL.md`](SKILL.md) with your coding agent harness; see [AGENTS.md](AGENTS.md) for the integration guide.
+Run `browser install skill` to install [`SKILL.md`](SKILL.md) into Claude Code / Codex / OpenCode, or share the file with any other harness.
 
 ## Rust implementation (preview)
 
