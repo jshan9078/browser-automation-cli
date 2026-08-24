@@ -14,6 +14,7 @@ Standalone (no daemon):
   browser install [--headless-only]      Download Chromium (Chrome for Testing, same build Playwright pins)
   browser cleanup                        Kill Chromium processes started by this tool
   browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
+  browser docs [skill|agents]            Print the agent skill file / integration guide (shipped in the binary)
 
 Daemon (start with: browser-daemon):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -336,12 +337,20 @@ fn update_cmd() -> i32 {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() || args[0] == "-h" || args[0] == "--help" { print!("{HELP}"); update_notice(); return; }
-    if args[0] == "--version" || args[0] == "-V" || args[0] == "version" { let c = browser_cli::update::read_cache(); println!("{}", json!({"version": env!("CARGO_PKG_VERSION"), "client": "rust", "latest": c["latest"], "checked_at": c["checked_at"]})); update_notice(); return; }
+    if args[0] == "--version" || args[0] == "-V" || args[0] == "version" { let c = browser_cli::update::read_cache(); println!("{}", json!({"version": env!("CARGO_PKG_VERSION"), "client": "rust", "latest": browser_cli::update::cached_latest(), "checked_at": c["checked_at"]})); update_notice(); return; }
     let cmd = args[0].as_str();
     let code = match cmd {
         "capture" => capture(&args[1..]),
         "install" => match browser_cli::install::run(&args[1..]) { Ok(()) => 0, Err(e) => { eprintln!("{}", err_json(&e)); 1 } },
         "update" => update_cmd(),
+        "docs" => {
+            // shipped with the binary so an installed tool is self-documenting for agents
+            match args.get(1).map(String::as_str) {
+                Some("agents") => print!("{}", include_str!("../AGENTS.md")),
+                _ => print!("{}", include_str!("../SKILL.md")),
+            }
+            0
+        }
         "cleanup" => cleanup(),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));

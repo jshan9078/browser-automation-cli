@@ -344,7 +344,7 @@ def main():
     if args[0] in ("--version", "-V", "version"):
         from daemon import update
         c = update.read_cache()
-        print(json.dumps({"version": update.current_version(), "latest": c.get("latest"), "checked_at": c.get("checked_at")}))
+        print(json.dumps({"version": update.current_version(), "latest": update.cached_latest(), "checked_at": c.get("checked_at")}))
         _update_notice()
         return
     if args[0] == "update":

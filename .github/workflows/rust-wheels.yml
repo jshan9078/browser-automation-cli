@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Sync the package README (PyPI description) from the repo README
-        run: cp README.md rust/README.md
+        run: cp README.md SKILL.md AGENTS.md rust/
       - uses: PyO3/maturin-action@v1
         with:
           working-directory: rust
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cp README.md rust/README.md
+      - run: cp README.md SKILL.md AGENTS.md rust/
       - uses: PyO3/maturin-action@v1
         with:
           working-directory: rust

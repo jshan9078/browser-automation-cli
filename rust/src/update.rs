@@ -35,11 +35,19 @@ pub fn check_now() -> Value {
 
 pub fn read_cache() -> Value { std::fs::read_to_string(cache_path()).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or(Value::Null) }
 
+/// The cached latest-version, unless the cache predates the running version (e.g. right after an
+/// upgrade the daily cache still names the old release) — then it is stale and we report nothing.
+pub fn cached_latest() -> Option<String> {
+    let c = read_cache();
+    let l = c["latest"].as_str()?.to_string();
+    if is_newer(CURRENT, &l) { None } else { Some(l) }
+}
+
 /// One-line stderr hint when the cache shows a newer release. Silent if opted out / unknown.
 pub fn notice() {
     if std::env::var("BROWSER_NO_UPDATE_CHECK").is_ok() { return; }
-    let c = read_cache();
-    if let Some(latest) = c["latest"].as_str() {
+    if let Some(latest) = cached_latest() {
+        let latest = latest.as_str();
         if is_newer(latest, CURRENT) {
             eprintln!("{PACKAGE} {latest} is available (you have {CURRENT}): uv tool upgrade {PACKAGE}  (BROWSER_NO_UPDATE_CHECK=1 to silence)");
         }
@@ -52,7 +60,9 @@ pub fn start_background_checks() {
     std::thread::spawn(|| loop {
         let c = read_cache();
         let age = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0) - c["checked_at"].as_f64().unwrap_or(0.0);
-        if age > 86400.0 { let i = check_now(); if let Some(l) = i["latest"].as_str() { if is_newer(l, CURRENT) { eprintln!("[daemon] update available: {PACKAGE} {l} (running {CURRENT})"); } } }
+        // self-heal after an upgrade: a cache naming an older release than the running one is stale
+        let stale = c["latest"].as_str().map(|l| is_newer(CURRENT, l)).unwrap_or(false);
+        if age > 86400.0 || stale { let i = check_now(); if let Some(l) = i["latest"].as_str() { if is_newer(l, CURRENT) { eprintln!("[daemon] update available: {PACKAGE} {l} (running {CURRENT})"); } } }
         std::thread::sleep(std::time::Duration::from_secs(3600));
     });
 }

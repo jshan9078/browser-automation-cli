@@ -57,12 +57,20 @@ def read_cache() -> dict:
         return {}
 
 
+def cached_latest():
+    """Cached latest version, or None when the cache predates the running version (stale
+    right after an upgrade, until the daemon's next daily check rewrites it)."""
+    latest = read_cache().get("latest")
+    if latest and not is_newer(current_version(), latest):
+        return latest
+    return None
+
+
 def notice() -> str:
     """One-line hint for the CLI to print on stderr, or '' if up to date / unknown / opted out."""
     if os.environ.get("BROWSER_NO_UPDATE_CHECK"):
         return ""
-    c = read_cache()
-    latest, cur = c.get("latest"), current_version()
+    latest, cur = cached_latest(), current_version()
     if latest and is_newer(latest, cur):
         return f"browser-automation-cli {latest} is available (you have {cur}): uv tool upgrade {PACKAGE}  (set BROWSER_NO_UPDATE_CHECK=1 to silence)"
     return ""
@@ -76,7 +84,8 @@ def start_background_checks():
     def loop():
         while True:
             c = read_cache()
-            if time.time() - c.get("checked_at", 0) > INTERVAL:
+            stale = bool(c.get("latest")) and is_newer(current_version(), c["latest"])
+            if stale or time.time() - c.get("checked_at", 0) > INTERVAL:
                 info = check_now()
                 if info.get("latest") and is_newer(info["latest"], info["current"]):
                     logger.info(f"Update available: {PACKAGE} {info['latest']} (running {info['current']})")
