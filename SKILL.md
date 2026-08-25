@@ -73,6 +73,7 @@ browser shutdown
 browser <id> navigate <url> [-s]        # -s on any action: append a fresh snapshot
 browser <id> snapshot [scope] [--all] [--max N] [--json]
 browser <id> click <target> [--double] [-s]
+browser <id> click --at X,Y [--double]   # click raw viewport pixels (canvas / vision — no DOM target)
 browser <id> type <target> <text> [--sequential] [--submit] [-s]   # alias: fill
 browser <id> press <key> [target]       # Enter, Tab, Escape, Control+a
 browser <id> hover <target>
@@ -87,7 +88,7 @@ browser <id> back | forward
 browser <id> batch                      # JSON lines on stdin, one round-trip
 ```
 
-**Targets:** `@e12` (ref from snapshot — preferred) · `--text "Create"` · `--role button --name Create` · `--label "Email"` · `--placeholder Search` · CSS selector. Ambiguous CSS selectors are refused; use a ref or text.
+**Targets:** `@e12` (ref from snapshot — preferred) · `--text "Create"` · `--role button --name Create` · `--label "Email"` · `--placeholder Search` · CSS selector. Ambiguous CSS selectors are refused; use a ref or text. For canvas / vision cases with no DOM target, `click --at X,Y` clicks raw viewport pixels (take a `screenshot` first; its pixels map 1:1 to click coordinates).
 
 ## Snapshot Format
 

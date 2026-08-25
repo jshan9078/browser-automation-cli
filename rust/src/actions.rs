@@ -189,8 +189,14 @@ pub async fn snapshot_p(page: &Page, p: &Map<String, Value>) -> Value {
 }
 
 pub async fn click(page: &Page, p: &Map<String, Value>) -> Value {
-    let r = match page.resolve(&target_of(p), ACTION_TIMEOUT_MS).await { Ok(r) => r, Err(e) => return fail(e) };
-    let (x, y) = (r["x"].as_f64().unwrap_or(0.0), r["y"].as_f64().unwrap_or(0.0));
+    // Raw viewport pixel click (`click --at X,Y`) when x/y are given; else resolve a DOM target.
+    let (x, y) = match (p.get("x").and_then(|v| v.as_f64()), p.get("y").and_then(|v| v.as_f64())) {
+        (Some(x), Some(y)) => (x, y),
+        _ => {
+            let r = match page.resolve(&target_of(p), ACTION_TIMEOUT_MS).await { Ok(r) => r, Err(e) => return fail(e) };
+            (r["x"].as_f64().unwrap_or(0.0), r["y"].as_f64().unwrap_or(0.0))
+        }
+    };
     if let Err(e) = page.click_at(x, y, if flag(p, "double") { 2 } else { 1 }).await { return fail(e); }
     page.after(ok(), flag(p, "snap"), true).await
 }

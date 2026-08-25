@@ -42,7 +42,7 @@ Page commands (all print JSON; add -s/--snapshot to include a fresh snapshot in 
   browser <id> snapshot [scope-selector] [--all] [--max N] [--json]
                                          Interactive elements as "@e12 button "Create"" lines.
                                          --all adds text blocks; --json gives structured output
-  browser <id> click <target> [--double]
+  browser <id> click <target> [--double]      (or `--at X,Y` to click raw viewport pixels — canvas/vision)
   browser <id> type <target> <text> [--sequential] [--submit]   (alias: fill)
   browser <id> press <key> [target]      e.g. Enter, Tab, Control+a
   browser <id> hover <target>
@@ -128,7 +128,7 @@ fn parse_flags(args: &[String], bools: &[&str], valued: &[&str]) -> (Vec<String>
 }
 
 const BOOLS: &[&str] = &["-s", "--snapshot", "--all", "--json", "--double", "--sequential", "--submit", "--gone", "-f", "--full-page", "--clear", "--table"];
-const VALUED: &[&str] = &["--text", "--role", "--name", "--label", "--placeholder", "--wait", "--max", "--timeout", "-o", "--output", "-q", "--quality", "--selector", "--format"];
+const VALUED: &[&str] = &["--text", "--role", "--name", "--label", "--placeholder", "--wait", "--max", "--timeout", "-o", "--output", "-q", "--quality", "--selector", "--format", "--at"];
 
 fn target_params(f: &HashMap<String, Value>) -> Map<String, Value> {
     let mut p = Map::new();
@@ -166,7 +166,19 @@ fn build(sid: &str, action: &str, rest: &[String]) -> Option<Value> {
             req("snapshot", p)
         }
         "click" => {
-            p.insert("selector".into(), json!(sel(0)));
+            // `--at X,Y` clicks raw viewport pixels (for canvas / vision tasks with no DOM target);
+            // otherwise resolve a normal target (@ref / selector / --text / ...).
+            if let Some(at) = f.get("at").and_then(|v| v.as_str()) {
+                let mut it = at.split(',');
+                let x = it.next().and_then(|s| s.trim().parse::<f64>().ok());
+                let y = it.next().and_then(|s| s.trim().parse::<f64>().ok());
+                match (x, y) {
+                    (Some(x), Some(y)) => { p.insert("x".into(), json!(x)); p.insert("y".into(), json!(y)); }
+                    _ => return None,
+                }
+            } else {
+                p.insert("selector".into(), json!(sel(0)));
+            }
             if f.contains_key("double") { p.insert("double".into(), json!(true)); }
             req("click", p)
         }

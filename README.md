@@ -126,7 +126,7 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 | :-- | :-- |
 | `navigate <url> [--wait load\|domcontentloaded\|networkidle]` | Returns as soon as the page is usable; never fails on a slow `networkidle` |
 | `snapshot [scope] [--all] [--max N] [--json]` | Visible interactive elements + headings. `--all` adds text blocks, `--json` gives boxes and unique selectors |
-| `click <target> [--double]` | |
+| `click <target> [--double]` | Also `click --at X,Y` to click raw viewport pixels (canvas / vision — no DOM target; screenshot first, pixels map 1:1) |
 | `type <target> <text> [--sequential] [--submit]` | `fill()` by default; `--sequential` sends key events (autocomplete); `--submit` presses Enter |
 | `press <key> [target]` | `Enter`, `Tab`, `Control+a`, … |
 | `hover <target>` | |
@@ -140,7 +140,7 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 | `back` / `forward` | |
 | `batch` | JSON lines on stdin, run in one round-trip, stop at first failure |
 
-**Targets:** `@e12` (ref from snapshot — preferred) · CSS selector · `text=Create` · `role=button[name=Create]` · `label=Email` · `placeholder=Search` · or flags `--text / --role [--name] / --label / --placeholder`. Ambiguous CSS selectors are refused (strict mode) instead of clicking the first match.
+**Targets:** `@e12` (ref from snapshot — preferred) · CSS selector · `text=Create` · `role=button[name=Create]` · `label=Email` · `placeholder=Search` · or flags `--text / --role [--name] / --label / --placeholder`. Ambiguous CSS selectors are refused (strict mode) instead of clicking the first match. For canvas / vision cases with no DOM target, `click --at X,Y` clicks raw viewport pixels (take a `screenshot` first; its pixels map 1:1 to click coordinates).
 
 ***
 
