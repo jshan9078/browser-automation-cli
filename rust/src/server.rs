@@ -50,8 +50,15 @@ pub async fn process(shared: &Shared, request: &Value, shutdown: &tokio::sync::w
     match action {
         "create" => {
             let visible = params.get("visible").and_then(|v| v.as_bool()).unwrap_or(false);
+            // per-session profile: explicit --ephemeral / --profile <name>, else the daemon default
+            let profile = if params.get("ephemeral").and_then(|v| v.as_bool()).unwrap_or(false) { None }
+                else if let Some(p) = params.get("profile").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) { Some(p.to_string()) }
+                else { crate::chrome::config_profile() };
             let mut m = shared.lock().await;
-            match m.create(visible).await { Ok(id) => json!({"success": true, "session_id": id, "visible": visible}), Err(e) => json!({"success": false, "error": e}) }
+            match m.create(profile.clone(), visible).await {
+                Ok(id) => json!({"success": true, "session_id": id, "visible": visible, "profile": profile.unwrap_or_else(|| "ephemeral".into())}),
+                Err(e) => json!({"success": false, "error": e}),
+            }
         }
         "list" => json!({"success": true, "sessions": shared.lock().await.list()}),
         "shutdown" => { let _ = shutdown.send(true); json!({"success": true}) }
@@ -103,8 +110,11 @@ pub async fn run() -> Result<(), String> {
     let _ = std::fs::remove_file(&sock);
     crate::update::start_background_checks();
     let shared: Shared = Arc::new(Mutex::new(Manager::new()));
-    // warm the headless browser so the first `create` is fast
-    { let mut m = shared.lock().await; if let Err(e) = m.browser(true).await { eprintln!("[daemon] warning: {e}"); } }
+    // browsers are launched per session on demand (one process per distinct profile in use)
+    match crate::chrome::config_profile() {
+        Some(p) => eprintln!("[daemon] default profile: {p}"),
+        None => eprintln!("[daemon] default: ephemeral sessions"),
+    }
     let listener = UnixListener::bind(&sock).map_err(|e| format!("bind {}: {e}", sock.display()))?;
     actions::set_mode(&sock, 0o600);
     let sock_ino = std::fs::metadata(&sock).ok().map(|m| { use std::os::unix::fs::MetadataExt; m.ino() });
@@ -116,7 +126,7 @@ pub async fn run() -> Result<(), String> {
         let shared = shared.clone();
         tokio::spawn(async move {
             loop {
-                let cdps: Vec<crate::cdp::Cdp> = { let m = shared.lock().await; [&m.browsers.headless, &m.browsers.headed].iter().filter_map(|b| b.as_ref().map(|b| b.cdp.clone())).collect() };
+                let cdps: Vec<crate::cdp::Cdp> = { let m = shared.lock().await; m.browsers.values().map(|b| b.cdp.clone()).collect() };
                 let mut rxs: Vec<_> = cdps.iter().map(|c| c.subscribe()).collect();
                 if rxs.is_empty() { tokio::time::sleep(std::time::Duration::from_secs(1)).await; continue; }
                 let deadline = tokio::time::sleep(std::time::Duration::from_secs(5));

@@ -92,6 +92,16 @@ browser install [--all]                    # download headless Chromium (Chrome 
                                            # the headed build (~356 MB) downloads on first `show`, or now with --all
 browser engine [auto|managed|system|<path>]  # use your installed Chrome/Edge/Brave instead (zero download);
                                            # auto = managed build if downloaded, else the system browser
+browser profile [status]                   # by DEFAULT sessions use a persistent "default" profile:
+                                           # the first session opens a window to sign in, every later
+                                           # session reuses that login. Manage it with:
+browser profile <name> | new <name>        #   switch to / create a named persistent profile
+browser profile delete <name>              #   delete a profile + its logins (each is a full Chrome
+                                           #   profile, ~100 MB+; delete ones you no longer need)
+browser profile ephemeral                  #   make throwaway the default for new sessions
+browser create --profile <name>            #   per-session: this session uses its own persistent login
+browser create --ephemeral                 #   per-session: throwaway, isolated
+                                           #   (different --profile = concurrent & isolated; same = shared tabs)
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
 browser install skill                      # install the agent skill into Claude Code / Codex / OpenCode
 ```

@@ -1,6 +1,6 @@
 [package]
 name = "browser-cli"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 description = "Browser automation daemon + CLI for coding agents. Persistent sessions, no MCP, no extensions."
 license = "MIT"

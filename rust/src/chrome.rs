@@ -12,6 +12,9 @@ pub const LAUNCH_ARGS: &[&str] = &[
     "--disable-features=Translate,MediaRouter,OptimizationHints", "--password-store=basic", "--use-mock-keychain",
     "--disable-search-engine-choice-screen", "--hide-scrollbars", "--mute-audio", "--remote-debugging-port=0",
 ];
+// Ephemeral-only: a mock OS keystore avoids Keychain noise, but its key is not stable across runs,
+// so it must NOT be used for a persistent profile (on-disk cookies would be undecryptable next launch).
+const EPHEMERAL_ARGS: &[&str] = &["--use-mock-keychain"];
 
 pub struct Browser {
     pub cdp: Cdp,
@@ -19,6 +22,7 @@ pub struct Browser {
     pub headless: bool,
     pub version: String,
     _user_data: PathBuf,
+    persistent: bool,  // profile dir: keep it on close (do not delete)
 }
 
 fn playwright_cache() -> PathBuf {
@@ -85,6 +89,23 @@ fn managed_executable(headless: bool) -> Option<PathBuf> {
     all.into_iter().find(|p| p.exists())
 }
 
+/// Which persistent profile the daemon uses, or None for throwaway (ephemeral) sessions.
+/// DEFAULT is the persistent profile "default" — sign in once, every later session reuses it.
+/// Overrides: env BROWSER_EPHEMERAL=1 (throwaway, used by tests/CI), env BROWSER_PROFILE=<name>,
+/// then config.json ({"ephemeral":true} | {"profile":"<name>"}); absent = "default".
+pub fn config_profile() -> Option<String> {
+    if std::env::var("BROWSER_EPHEMERAL").is_ok() { return None; }
+    if let Ok(p) = std::env::var("BROWSER_PROFILE") { return if p.is_empty() { None } else { Some(p) }; }
+    let path = Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/config.json");
+    let v: serde_json::Value = std::fs::read_to_string(path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_else(|| serde_json::json!({}));
+    if v.get("ephemeral").and_then(|b| b.as_bool()).unwrap_or(false) { return None; }
+    Some(v.get("profile").and_then(|s| s.as_str()).filter(|s| !s.is_empty()).unwrap_or("default").to_string())
+}
+
+pub fn profile_dir(name: &str) -> PathBuf {
+    Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/profiles").join(name)
+}
+
 pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
     if let Ok(p) = std::env::var("BROWSER_CHROME_PATH") { return Ok(PathBuf::from(p)); }
     match config_engine().as_deref() {
@@ -112,13 +133,22 @@ pub async fn launch(headless: bool) -> Result<Browser, String> {
         // e.g. headless-only install and the first `show`: fetch the missing build now
         tokio::task::spawn_blocking(move || crate::install::ensure(headless)).await.map_err(|e| e.to_string())??;
     }
+    launch_in(headless, None).await
+}
+
+/// Launch, optionally in a persistent on-disk profile dir (for `browser profile`).
+pub async fn launch_in(headless: bool, profile: Option<PathBuf>) -> Result<Browser, String> {
     let exe = find_executable(headless)?;
-    let user_data = std::env::temp_dir().join(format!("browser-daemon-{}-{}", if headless { "headless" } else { "headed" }, std::process::id()));
+    let persistent = profile.is_some();
+    let user_data = profile.unwrap_or_else(|| std::env::temp_dir().join(format!("browser-daemon-{}-{}", if headless { "headless" } else { "headed" }, std::process::id())));
     let mut cmd = Command::new(&exe);
     cmd.args(LAUNCH_ARGS).arg(format!("--user-data-dir={}", user_data.display()));
-    if headless { cmd.arg("--headless"); } else { cmd.arg("--window-size=1280,900"); }
+    if !persistent { cmd.args(EPHEMERAL_ARGS); }  // persistent profiles use the real OS keystore for stable cookie encryption
+    // Headed: start with NO window (--no-startup-window) so there is no leftover about:blank window;
+    // the session's own Target.createTarget is then the only window. Headless keeps a blank start page.
+    if headless { cmd.arg("--headless").arg("about:blank"); } else { cmd.arg("--window-size=1280,900").arg("--no-startup-window"); }
     if cfg!(target_os = "linux") { cmd.arg("--no-sandbox"); }
-    cmd.arg("about:blank").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped()).kill_on_drop(true);
+    cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped()).kill_on_drop(true);
     let mut child = cmd.spawn().map_err(|e| format!("launch {}: {e}", exe.display()))?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
     let mut lines = BufReader::new(stderr).lines();
@@ -133,14 +163,19 @@ pub async fn launch(headless: bool) -> Result<Browser, String> {
     let v = cdp.send(None, "Browser.getVersion", serde_json::json!({})).await?;
     let version = v.get("product").and_then(|p| p.as_str()).unwrap_or("Chrome/0").to_string();
     eprintln!("[daemon] using {} ({})", exe.display(), version);
-    Ok(Browser { cdp, child, headless, version, _user_data: user_data })
+    Ok(Browser { cdp, child, headless, version, _user_data: user_data, persistent })
 }
 
 impl Browser {
     pub async fn close(&mut self) {
+        // Ask Chrome to shut down gracefully and WAIT for it to exit — a persistent profile only
+        // commits batched cookie writes to its on-disk store on a clean shutdown; SIGKILL loses them.
         let _ = tokio::time::timeout(std::time::Duration::from_secs(3), self.cdp.send(None, "Browser.close", serde_json::json!({}))).await;
-        let _ = self.child.kill().await;
-        let _ = std::fs::remove_dir_all(&self._user_data);
+        match tokio::time::timeout(std::time::Duration::from_secs(8), self.child.wait()).await {
+            Ok(_) => {}
+            Err(_) => { let _ = self.child.kill().await; }
+        }
+        if !self.persistent { let _ = std::fs::remove_dir_all(&self._user_data); }
     }
     pub fn user_agent(&self) -> String {
         let major = self.version.split('/').nth(1).and_then(|v| v.split('.').next()).unwrap_or("145");

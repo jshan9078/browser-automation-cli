@@ -1,5 +1,7 @@
-//! Sessions: one browser context + one page each, living in the headless or the headed browser.
-//! Idle hidden sessions are frozen (script execution disabled) and, later, hibernated to disk.
+//! Sessions. Each session names a profile: a persistent on-disk Chrome profile (its own process,
+//! logins persist) or ephemeral (a throwaway isolated context). The daemon keeps one browser per
+//! distinct profile in use, so sessions on different profiles run concurrently and isolated, while
+//! sessions on the same profile share that profile's browser (separate tabs, shared login).
 use crate::actions::{self, Page};
 use crate::chrome::{self, Browser};
 use crate::js;
@@ -20,6 +22,16 @@ pub fn hibernate_after() -> f64 { env_f("BROWSER_HIBERNATE_AFTER", 600.0) }
 pub fn state_dir() -> PathBuf { PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".browser-daemon").join("sessions") }
 fn now() -> f64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0) }
 
+/// Map key for the browser process that serves a (profile, headless) pair. Persistent profiles get
+/// one process per name (one Chrome per user-data-dir); ephemeral gets one per visibility (contexts
+/// isolate the sessions inside it).
+fn browser_key(profile: Option<&str>, headless: bool) -> String {
+    match profile {
+        Some(name) => format!("profile:{name}"),
+        None => format!("ephemeral:{}", if headless { "h" } else { "v" }),
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct SavedState {
     #[serde(default)] pub cookies: Vec<Value>,
@@ -27,7 +39,7 @@ pub struct SavedState {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct Persisted { url: String, state: Option<SavedState>, created_at: f64, title: String, #[serde(default)] visible: bool }
+struct Persisted { url: String, state: Option<SavedState>, created_at: f64, title: String, #[serde(default)] visible: bool, #[serde(default)] profile: Option<String> }
 
 pub struct Live {
     pub page: Page,
@@ -38,6 +50,7 @@ pub struct Live {
 
 pub struct Session {
     pub id: String,
+    pub profile: Option<String>,  // None = ephemeral
     pub visible: bool,
     pub live: Option<Live>,
     pub created_at: f64,
@@ -50,18 +63,16 @@ pub struct Session {
     pub console: VecDeque<Value>,
 }
 
-pub struct Browsers { pub headless: Option<Browser>, pub headed: Option<Browser> }
-
 pub struct Manager {
     pub sessions: HashMap<String, Session>,
-    pub browsers: Browsers,
+    pub browsers: HashMap<String, Browser>,  // browser_key -> process
 }
 
 pub type Shared = Arc<Mutex<Manager>>;
 
 impl Manager {
     pub fn new() -> Manager {
-        let mut m = Manager { sessions: HashMap::new(), browsers: Browsers { headless: None, headed: None } };
+        let mut m = Manager { sessions: HashMap::new(), browsers: HashMap::new() };
         let dir = state_dir();
         let _ = std::fs::create_dir_all(&dir); actions::set_mode(&dir, 0o700);
         if let Ok(rd) = std::fs::read_dir(&dir) {
@@ -71,7 +82,7 @@ impl Manager {
                     if let Ok(txt) = std::fs::read_to_string(&p) {
                         if let Ok(ps) = serde_json::from_str::<Persisted>(&txt) {
                             let id = p.file_stem().unwrap().to_string_lossy().to_string();
-                            m.sessions.insert(id.clone(), Session { id, visible: ps.visible, live: None, created_at: ps.created_at, last_used: Instant::now(), frozen: false, busy: 0, title: ps.title, saved_url: ps.url, saved_state: ps.state, console: VecDeque::new() });
+                            m.sessions.insert(id.clone(), Session { id, profile: ps.profile, visible: ps.visible, live: None, created_at: ps.created_at, last_used: Instant::now(), frozen: false, busy: 0, title: ps.title, saved_url: ps.url, saved_state: ps.state, console: VecDeque::new() });
                         }
                     }
                 }
@@ -81,36 +92,61 @@ impl Manager {
         m
     }
 
-    pub async fn browser(&mut self, headless: bool) -> Result<&mut Browser, String> {
-        let slot = if headless { &mut self.browsers.headless } else { &mut self.browsers.headed };
-        if slot.as_ref().map(|b| !b.cdp.is_alive()).unwrap_or(true) {
-            eprintln!("[daemon] launching {} browser", if headless { "headless" } else { "headed" });
-            *slot = Some(chrome::launch(headless).await?);
+    /// Ensure the browser process for (profile, headless) exists; returns its key.
+    async fn ensure_browser(&mut self, profile: Option<&str>, headless: bool) -> Result<String, String> {
+        let key = browser_key(profile, headless);
+        if let Some(b) = self.browsers.get(&key) {
+            if b.cdp.is_alive() {
+                // one process per persistent profile dir: its mode is fixed until it closes
+                if profile.is_some() && b.headless != headless {
+                    return Err(format!("profile '{}' is already running {}; finish/`delete` its sessions (or `browser shutdown`) to reopen it {}",
+                        profile.unwrap(), if b.headless { "headless" } else { "headed" }, if headless { "headless" } else { "headed" }));
+                }
+                return Ok(key);
+            }
+            self.browsers.remove(&key);
         }
-        Ok(slot.as_mut().unwrap())
+        let b = match profile {
+            Some(name) => {
+                let dir = chrome::profile_dir(name);
+                std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+                eprintln!("[daemon] launching {} browser for profile '{name}'", if headless { "headless" } else { "headed" });
+                chrome::launch_in(headless, Some(dir)).await?
+            }
+            None => { eprintln!("[daemon] launching {} ephemeral browser", if headless { "headless" } else { "headed" }); chrome::launch(headless).await? }
+        };
+        self.browsers.insert(key.clone(), b);
+        Ok(key)
     }
 
+    /// Close any browser process no live session still needs.
     pub async fn close_idle_browsers(&mut self) {
-        let live_visible = self.sessions.values().any(|s| s.live.as_ref().map(|l| !l.headless).unwrap_or(false));
-        let live_hidden = self.sessions.values().any(|s| s.live.as_ref().map(|l| l.headless).unwrap_or(false));
-        if !live_visible { if let Some(mut b) = self.browsers.headed.take() { eprintln!("[daemon] closing idle headed browser"); b.close().await; } }
-        if !live_hidden { if let Some(mut b) = self.browsers.headless.take() { eprintln!("[daemon] closing idle headless browser"); b.close().await; } }
+        let used: Vec<String> = self.sessions.values().filter_map(|s| s.live.as_ref().map(|l| browser_key(s.profile.as_deref(), l.headless))).collect();
+        let idle: Vec<String> = self.browsers.keys().filter(|k| !used.contains(k)).cloned().collect();
+        for k in idle {
+            if let Some(mut b) = self.browsers.remove(&k) { eprintln!("[daemon] closing idle browser {k}"); b.close().await; }
+        }
     }
 
     pub async fn close_all_browsers(&mut self) {
-        if let Some(mut b) = self.browsers.headed.take() { b.close().await; }
-        if let Some(mut b) = self.browsers.headless.take() { b.close().await; }
+        for (_, mut b) in self.browsers.drain() { b.close().await; }
     }
 
-    // ---- lifecycle --------------------------------------------------------
+    // ---- lifecycle ----------------------------------------------------------
     async fn attach(&mut self, id: &str, visible: bool, url: Option<String>) -> Result<(), String> {
-        let (saved_state, saved_url) = { let s = self.sessions.get(id).ok_or("no session")?; (s.saved_state.clone(), s.saved_url.clone()) };
+        let (saved_state, saved_url, profile) = { let s = self.sessions.get(id).ok_or("no session")?; (s.saved_state.clone(), s.saved_url.clone(), s.profile.clone()) };
         let headless = !visible;
-        let ua = { let b = self.browser(headless).await?; b.user_agent() };
-        let cdp = self.browser(headless).await?.cdp.clone();
-        let ctx = cdp.send(None, "Target.createBrowserContext", json!({"disposeOnDetach": false})).await?;
-        let context_id = ctx["browserContextId"].as_str().ok_or("no browserContextId")?.to_string();
-        let mut create = json!({"url": "about:blank", "browserContextId": context_id});
+        let key = self.ensure_browser(profile.as_deref(), headless).await?;
+        let b = self.browsers.get(&key).unwrap();
+        let (cdp, ua) = (b.cdp.clone(), b.user_agent());
+        // Persistent profile → Chrome's default on-disk context (state persists). Ephemeral → a throwaway context.
+        let persistent = profile.is_some();
+        let context_id = if persistent { String::new() } else {
+            let ctx = cdp.send(None, "Target.createBrowserContext", json!({"disposeOnDetach": false})).await?;
+            ctx["browserContextId"].as_str().ok_or("no browserContextId")?.to_string()
+        };
+        let mut create = json!({"url": "about:blank"});
+        if !context_id.is_empty() { create["browserContextId"] = json!(context_id); }
         if !headless { create["newWindow"] = json!(true); create["width"] = json!(VIEWPORT.0); create["height"] = json!(VIEWPORT.1); }
         let t = cdp.send(None, "Target.createTarget", create).await?;
         let target_id = t["targetId"].as_str().ok_or("no targetId")?.to_string();
@@ -120,7 +156,6 @@ impl Manager {
         page.send("Page.enable", json!({})).await?;
         page.send("Runtime.enable", json!({})).await?;
         page.send("Network.enable", json!({})).await?;
-        // track in-flight requests for networkidle
         { let inflight = page.inflight.clone(); let mut rx = cdp.subscribe(); let sid2 = sid.clone();
           tokio::spawn(async move { use std::sync::atomic::Ordering; let mut ids = std::collections::HashSet::new();
             loop { match rx.recv().await {
@@ -135,7 +170,6 @@ impl Manager {
         page.send("Network.setUserAgentOverride", json!({"userAgent": ua})).await?;
         page.send("Emulation.setDeviceMetricsOverride", json!({"width": VIEWPORT.0, "height": VIEWPORT.1, "deviceScaleFactor": 1, "mobile": false})).await?;
         page.send("Page.addScriptToEvaluateOnNewDocument", json!({"source": js::STEALTH})).await?;
-        // a headed window that is not frontmost has no document focus, so insertText/key events are dropped
         let _ = page.send("Emulation.setFocusEmulationEnabled", json!({"enabled": true})).await;
         if let Some(st) = &saved_state {
             if !st.cookies.is_empty() { let _ = cdp.send(None, "Storage.setCookies", json!({"cookies": st.cookies, "browserContextId": context_id})).await; }
@@ -158,13 +192,17 @@ impl Manager {
     async fn save(&mut self, id: &str) {
         let Some(s) = self.sessions.get_mut(id) else { return };
         if let Some(l) = &s.live {
-            let cookies = l.page.cdp.send(None, "Storage.getCookies", json!({"browserContextId": l.context_id})).await.ok().and_then(|v| v["cookies"].as_array().cloned()).unwrap_or_default();
-            let mut ls = s.saved_state.clone().unwrap_or_default().local_storage;
-            if let Ok(v) = l.page.call(js::LOCAL_STORAGE_DUMP, &[]).await { if v.is_object() { let o = v["origin"].clone(); ls.retain(|e| e["origin"] != o); ls.push(v); } }
-            s.saved_state = Some(SavedState { cookies, local_storage: ls });
-            s.saved_url = l.page.url().await;
+            if l.context_id.is_empty() {
+                s.saved_url = l.page.url().await;  // profile mode: the on-disk profile is the state
+            } else {
+                let cookies = l.page.cdp.send(None, "Storage.getCookies", json!({"browserContextId": l.context_id})).await.ok().and_then(|v| v["cookies"].as_array().cloned()).unwrap_or_default();
+                let mut ls = s.saved_state.clone().unwrap_or_default().local_storage;
+                if let Ok(v) = l.page.call(js::LOCAL_STORAGE_DUMP, &[]).await { if v.is_object() { let o = v["origin"].clone(); ls.retain(|e| e["origin"] != o); ls.push(v); } }
+                s.saved_state = Some(SavedState { cookies, local_storage: ls });
+                s.saved_url = l.page.url().await;
+            }
         }
-        let p = Persisted { url: s.saved_url.clone(), state: s.saved_state.clone(), created_at: s.created_at, title: s.title.clone(), visible: s.visible };
+        let p = Persisted { url: s.saved_url.clone(), state: s.saved_state.clone(), created_at: s.created_at, title: s.title.clone(), visible: s.visible, profile: s.profile.clone() };
         let f = state_dir().join(format!("{id}.json"));
         let _ = std::fs::write(&f, serde_json::to_string(&p).unwrap()); actions::set_mode(&f, 0o600);
     }
@@ -176,7 +214,7 @@ impl Manager {
         let s = self.sessions.get_mut(id).unwrap();
         if let Some(l) = s.live.take() {
             let _ = l.page.cdp.send(None, "Target.closeTarget", json!({"targetId": l.target_id})).await;
-            let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await;
+            if !l.context_id.is_empty() { let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await; }
         }
         s.frozen = false;
     }
@@ -188,12 +226,20 @@ impl Manager {
         }
     }
 
-    pub async fn create(&mut self, visible: bool) -> Result<String, String> {
+    pub async fn create(&mut self, profile: Option<String>, visible: bool) -> Result<String, String> {
+        // First use of a persistent profile opens a visible window so the user can sign in;
+        // every later session reuses that authenticated profile (headless by default).
+        let mut visible = visible;
+        let mut first_use = false;
+        if let Some(name) = &profile {
+            if !visible && !chrome::profile_dir(name).join("Default").exists() { visible = true; first_use = true; }
+        }
         let id = uuid::Uuid::new_v4().simple().to_string()[..8].to_string();
-        self.sessions.insert(id.clone(), Session { id: id.clone(), visible, live: None, created_at: now(), last_used: Instant::now(), frozen: false, busy: 0, title: String::new(), saved_url: "about:blank".into(), saved_state: None, console: VecDeque::new() });
+        self.sessions.insert(id.clone(), Session { id: id.clone(), profile: profile.clone(), visible, live: None, created_at: now(), last_used: Instant::now(), frozen: false, busy: 0, title: String::new(), saved_url: "about:blank".into(), saved_state: None, console: VecDeque::new() });
         if let Err(e) = self.attach(&id, visible, None).await { self.sessions.remove(&id); return Err(e); }
         self.save(&id).await;
-        eprintln!("[daemon] created session {id} (visible={visible})");
+        eprintln!("[daemon] created session {id} (profile={}, visible={visible})", profile.as_deref().unwrap_or("ephemeral"));
+        if first_use { eprintln!("[daemon] first use of profile '{}': opened a window to sign in — later sessions reuse the login", profile.as_deref().unwrap_or("")); }
         Ok(id)
     }
 
@@ -225,7 +271,8 @@ impl Manager {
     pub fn list(&self) -> Value {
         let mut v: Vec<&Session> = self.sessions.values().collect();
         v.sort_by(|a, b| a.created_at.partial_cmp(&b.created_at).unwrap());
-        json!(v.iter().map(|s| json!({"session_id": s.id, "url": s.saved_url_or_live(), "title": s.title,
+        json!(v.iter().map(|s| json!({"session_id": s.id, "url": s.saved_url, "title": s.title,
+            "profile": s.profile.clone().unwrap_or_else(|| "ephemeral".into()),
             "state": if s.live.is_none() { "hibernated" } else if s.frozen { "frozen" } else { "active" }, "visible": s.visible})).collect::<Vec<_>>())
     }
 
@@ -234,7 +281,7 @@ impl Manager {
         if self.sessions[id].frozen { self.set_frozen(id, false).await; }
         if let Some(l) = self.sessions.get_mut(id).unwrap().live.take() {
             let _ = l.page.cdp.send(None, "Target.closeTarget", json!({"targetId": l.target_id})).await;
-            let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await;
+            if !l.context_id.is_empty() { let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await; }
         }
         self.sessions.remove(id);
         let _ = std::fs::remove_file(state_dir().join(format!("{id}.json")));
@@ -271,10 +318,6 @@ impl Manager {
             }
         }
     }
-}
-
-impl Session {
-    fn saved_url_or_live(&self) -> String { self.saved_url.clone() }
 }
 
 pub fn idle_sleep() -> Duration { Duration::from_secs(1) }
