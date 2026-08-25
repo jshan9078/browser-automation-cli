@@ -30,3 +30,8 @@ RELEASE.md
 *.tmp
 scratch/agentbench/results/calls.log
 scratch/agentbench/results/current.json
+
+# webbench run artifacts (contain PII / large; keep code only)
+scratch/webbench/raw/
+scratch/webbench/results/
+scratch/webbench/archive/
