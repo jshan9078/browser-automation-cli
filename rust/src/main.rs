@@ -434,7 +434,7 @@ fn profile_cmd(args: &[String]) -> i32 {
         let mut cfg = read_cfg(); cfg["profile"] = json!(name); cfg.as_object_mut().map(|o| o.remove("ephemeral"));
         if let Err(e) = write_cfg(&cfg) { eprintln!("{e}"); return 1; }
         println!("{}", serde_json::to_string_pretty(&json!({"profile": name, "dir": dir.to_string_lossy(),
-            "note": "restart the daemon to apply (browser shutdown). First `create` opens a window to sign in; later sessions reuse it."})).unwrap());
+            "note": "first `create` opens a window to sign in; later sessions reuse it. `browser <id> show`/`hide` flips visible/headless without closing sessions."})).unwrap());
         0
     };
     match args.first().map(String::as_str) {

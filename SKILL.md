@@ -50,10 +50,11 @@ If a site needs login: `browser <id> show` → ask the user to log in in the win
 
 ## Profiles (persistent logins)
 
-- **Default is a persistent profile named `default`.** The first `create` opens a visible window so the user signs in once; every later session — including headless ones after a `browser shutdown` — reuses that authenticated profile. Do not ask for credentials; the user logs in in the window.
+- **Default is a persistent profile named `default`.** The first `create` opens a visible window so the user signs in once; every later session reuses that authenticated profile. Do not ask for credentials; the user logs in in the window.
 - `browser profile status` — show the active profile and list existing ones.
 - `browser profile <name>` / `browser profile new <name>` — switch to / create a named persistent profile (e.g. a second account). Restart the daemon (`browser shutdown`) to apply.
 - `browser profile ephemeral` — make throwaway the default for new sessions.
+- **Show/hide is seamless:** `browser <id> show` / `hide` flips a persistent profile between a visible window and headless without closing sessions (they stay, tabs reload, login persists).
 - **Per session:** `browser create --profile <name>` gives that session its own persistent login; `--profile` differs across sessions run them concurrently and isolated (each its own Chrome), while the same `--profile` shares one login across sessions (separate tabs). `browser create --ephemeral` is a throwaway isolated session.
 - **`browser profile delete <name>` — delete a profile when it is no longer needed.** Each profile is a full Chrome profile on disk (~100 MB and growing with cache/history), so remove ones you do not need to reclaim space. This erases that profile's logins.
 

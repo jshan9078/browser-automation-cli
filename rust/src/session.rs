@@ -226,6 +226,25 @@ impl Manager {
         }
     }
 
+    /// Seamlessly switch a persistent profile between headed and headless. A profile dir can only be
+    /// held by one Chrome process, so this relaunches that profile's browser in the new mode and
+    /// re-attaches ALL of the profile's live sessions (same session IDs, tabs restored to their URLs;
+    /// login persists on disk). Open pages reload — no session is closed. No-op if already in `headless`.
+    pub async fn switch_profile_mode(&mut self, profile: &str, headless: bool) -> Result<(), String> {
+        let key = browser_key(Some(profile), headless);
+        let running_mode = self.browsers.get(&key).filter(|b| b.cdp.is_alive()).map(|b| b.headless);
+        if running_mode == Some(headless) || running_mode.is_none() { return Ok(()); } // already right, or not running
+        // live sessions of this profile, in a stable order
+        let mut live_ids: Vec<String> = self.sessions.iter().filter(|(_, s)| s.profile.as_deref() == Some(profile) && s.live.is_some()).map(|(id, _)| id.clone()).collect();
+        live_ids.sort();
+        for id in &live_ids { self.save(id).await; }                       // persist current URL to restore
+        for id in &live_ids { let s = self.sessions.get_mut(id).unwrap(); s.frozen = false; s.live = None; } // drop dead handles (default context, nothing to dispose)
+        if let Some(mut b) = self.browsers.remove(&key) { b.close().await; } // close old-mode browser (flushes cookies)
+        for id in &live_ids { self.attach(id, !headless, None).await?; }    // relaunch (new mode) + re-attach each session
+        eprintln!("[daemon] switched profile '{profile}' to {} ({} session(s) re-attached)", if headless { "headless" } else { "headed" }, live_ids.len());
+        Ok(())
+    }
+
     pub async fn create(&mut self, profile: Option<String>, visible: bool) -> Result<String, String> {
         // First use of a persistent profile opens a visible window so the user can sign in;
         // every later session reuses that authenticated profile (headless by default).
@@ -234,6 +253,8 @@ impl Manager {
         if let Some(name) = &profile {
             if !visible && !chrome::profile_dir(name).join("Default").exists() { visible = true; first_use = true; }
         }
+        // If this profile is already running in the other mode, switch it seamlessly rather than erroring.
+        if let Some(name) = &profile { self.switch_profile_mode(name, !visible).await?; }
         let id = uuid::Uuid::new_v4().simple().to_string()[..8].to_string();
         self.sessions.insert(id.clone(), Session { id: id.clone(), profile: profile.clone(), visible, live: None, created_at: now(), last_used: Instant::now(), frozen: false, busy: 0, title: String::new(), saved_url: "about:blank".into(), saved_state: None, console: VecDeque::new() });
         if let Err(e) = self.attach(&id, visible, None).await { self.sessions.remove(&id); return Err(e); }
@@ -257,6 +278,14 @@ impl Manager {
 
     pub async fn set_visible(&mut self, id: &str, visible: bool) -> Result<(), String> {
         if !self.sessions.contains_key(id) { return Err("Session not found".into()); }
+        // Persistent profile: show/hide flips the whole profile's browser (all its sessions share one
+        // process), done seamlessly — sessions stay, tabs restore, no manual close.
+        if let Some(name) = self.sessions[id].profile.clone() {
+            self.switch_profile_mode(&name, !visible).await?;
+            if let Some(s) = self.sessions.get_mut(id) { s.last_used = Instant::now(); }
+            self.close_idle_browsers().await;
+            return Ok(());
+        }
         let s = &self.sessions[id];
         if s.live.is_some() && s.visible == visible { return Ok(()); }
         let url = if let Some(l) = &s.live { l.page.url().await } else { s.saved_url.clone() };

@@ -101,6 +101,7 @@ browser profile delete <name>              #   delete a profile + its logins (ea
 browser profile ephemeral                  #   make throwaway the default for new sessions
 browser create --profile <name>            #   per-session: this session uses its own persistent login
 browser create --ephemeral                 #   per-session: throwaway, isolated
+browser <id> show | hide                   #   flip a profile visible<->headless seamlessly (sessions kept)
                                            #   (different --profile = concurrent & isolated; same = shared tabs)
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
 browser install skill                      # install the agent skill into Claude Code / Codex / OpenCode
