@@ -28,7 +28,9 @@ Standalone (no daemon):
                                          throwaway sessions; `new`/`delete` manage named profiles
 
 Daemon (auto-started on first use; run it yourself with `browser daemon`; BROWSER_NO_AUTOSTART=1 disables auto-start):
-  browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
+  browser create [--show] [--profile <name>|--ephemeral]
+                                         New session. Uses the default profile unless --profile <name>
+                                         (its own persistent login) or --ephemeral (throwaway, isolated)
   browser list [--table]                 Sessions as JSON (--table for humans)
   browser <id> show | hide               Move the session to a visible window / back to headless
   browser <id> delete                    Close session and forget its cookies
@@ -561,7 +563,13 @@ fn main() {
         "cleanup" => cleanup(),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));
-            let r = send_request(&json!({"action": "create", "params": {"visible": visible}}));
+            let ephemeral = args[1..].iter().any(|a| a == "--ephemeral");
+            let profile = args.iter().position(|a| a == "--profile").and_then(|i| args.get(i + 1)).cloned();
+            let mut p = serde_json::Map::new();
+            p.insert("visible".into(), json!(visible));
+            if ephemeral { p.insert("ephemeral".into(), json!(true)); }
+            if let Some(name) = profile { p.insert("profile".into(), json!(name)); }
+            let r = send_request(&json!({"action": "create", "params": p}));
             if r.get("success").and_then(|v| v.as_bool()).unwrap_or(false) { println!("{}", r["session_id"].as_str().unwrap_or("")); 0 }
             else { eprintln!("Error: {}", r.get("error").and_then(|e| e.as_str()).unwrap_or("unknown")); 1 }
         }
@@ -569,11 +577,12 @@ fn main() {
             let r = send_request(&json!({"action": "list"}));
             if !r.get("success").and_then(|v| v.as_bool()).unwrap_or(false) { eprintln!("Error: {}", r.get("error").and_then(|e| e.as_str()).unwrap_or("unknown")); 1 }
             else if args.iter().any(|a| a == "--table") {
-                println!("{:<10} {:<11} {:<4} {:<50} TITLE", "SESSION_ID", "STATE", "VIS", "URL");
+                println!("{:<10} {:<12} {:<11} {:<4} {:<44} TITLE", "SESSION_ID", "PROFILE", "STATE", "VIS", "URL");
                 for s in r["sessions"].as_array().cloned().unwrap_or_default() {
                     let g = |k: &str| s.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let url: String = g("url").chars().take(48).collect(); let title: String = g("title").chars().take(30).collect();
-                    println!("{:<10} {:<11} {:<4} {:<50} {}", g("session_id"), g("state"), if s["visible"].as_bool().unwrap_or(false) { "yes" } else { "no" }, url, title);
+                    let url: String = g("url").chars().take(42).collect(); let title: String = g("title").chars().take(30).collect();
+                    let prof: String = g("profile").chars().take(11).collect();
+                    println!("{:<10} {:<12} {:<11} {:<4} {:<44} {}", g("session_id"), prof, g("state"), if s["visible"].as_bool().unwrap_or(false) { "yes" } else { "no" }, url, title);
                 }
                 0
             } else { println!("{}", serde_json::to_string_pretty(&r["sessions"]).unwrap()); 0 }

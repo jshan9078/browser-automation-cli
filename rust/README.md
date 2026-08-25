@@ -98,7 +98,10 @@ browser profile [status]                   # by DEFAULT sessions use a persisten
 browser profile <name> | new <name>        #   switch to / create a named persistent profile
 browser profile delete <name>              #   delete a profile + its logins (each is a full Chrome
                                            #   profile, ~100 MB+; delete ones you no longer need)
-browser profile ephemeral                  #   throwaway sessions (no persisted login)
+browser profile ephemeral                  #   make throwaway the default for new sessions
+browser create --profile <name>            #   per-session: this session uses its own persistent login
+browser create --ephemeral                 #   per-session: throwaway, isolated
+                                           #   (different --profile = concurrent & isolated; same = shared tabs)
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
 browser install skill                      # install the agent skill into Claude Code / Codex / OpenCode
 ```
