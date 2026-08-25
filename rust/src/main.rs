@@ -22,9 +22,10 @@ Standalone (no daemon):
                                          Which browser to launch: managed = pinned Chrome for Testing,
                                          system = your installed Chrome/Edge/Brave/Chromium (no download),
                                          auto (default) = managed if downloaded, else system
-  browser profile [<name> [--seed] | off | status]
-                                         Persistent CLI-owned profile: log in once, reused across
-                                         sessions and restarts. --seed bootstraps from your Chrome profile
+  browser profile [<name>|new <name>|delete <name>|ephemeral|status]
+                                         Persistent login profile (DEFAULT: "default"): first use opens a
+                                         window to sign in, every later session reuses it. `ephemeral` =
+                                         throwaway sessions; `new`/`delete` manage named profiles
 
 Daemon (auto-started on first use; run it yourself with `browser daemon`; BROWSER_NO_AUTOSTART=1 disables auto-start):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -422,33 +423,54 @@ fn profile_cmd(args: &[String]) -> i32 {
         if let Some(d) = cfg_path.parent() { std::fs::create_dir_all(d)?; }
         std::fs::write(&cfg_path, serde_json::to_string_pretty(cfg).unwrap())
     };
+    let profiles_root = std::path::Path::new(&home).join(".browser-daemon/profiles");
+    let existing = || -> Vec<String> { std::fs::read_dir(&profiles_root).ok().map(|rd| rd.flatten().filter(|e| e.path().is_dir()).map(|e| e.file_name().to_string_lossy().into_owned()).collect()).unwrap_or_default() };
+    let set_profile = |name: &str, seed: bool| -> i32 {
+        let dir = browser_cli::chrome::profile_dir(name);
+        if let Err(e) = std::fs::create_dir_all(&dir) { eprintln!("create {}: {e}", dir.display()); return 1; }
+        if seed { match seed_profile(&dir) { Ok(n) => eprintln!("Seeded {n} item(s) from your Chrome profile"), Err(e) => eprintln!("Seed skipped: {e}") } }
+        let mut cfg = read_cfg(); cfg["profile"] = json!(name); cfg.as_object_mut().map(|o| o.remove("ephemeral"));
+        if let Err(e) = write_cfg(&cfg) { eprintln!("{e}"); return 1; }
+        println!("{}", serde_json::to_string_pretty(&json!({"profile": name, "dir": dir.to_string_lossy(),
+            "note": "restart the daemon to apply (browser shutdown). First `create` opens a window to sign in; later sessions reuse it."})).unwrap());
+        0
+    };
     match args.first().map(String::as_str) {
         None | Some("status") => {
             let cur = browser_cli::chrome::config_profile();
-            let dir = cur.as_ref().map(|n| browser_cli::chrome::profile_dir(n).to_string_lossy().into_owned());
-            let profiles_root = std::path::Path::new(&home).join(".browser-daemon/profiles");
-            let existing: Vec<String> = std::fs::read_dir(&profiles_root).ok().map(|rd| rd.flatten().filter(|e| e.path().is_dir()).map(|e| e.file_name().to_string_lossy().into_owned()).collect()).unwrap_or_default();
-            println!("{}", serde_json::to_string_pretty(&json!({"active": cur, "dir": dir, "profiles": existing})).unwrap());
+            println!("{}", serde_json::to_string_pretty(&json!({
+                "mode": if cur.is_some() { "persistent" } else { "ephemeral" },
+                "active": cur.clone(),
+                "dir": cur.as_ref().map(|n| browser_cli::chrome::profile_dir(n).to_string_lossy().into_owned()),
+                "profiles": existing(),
+            })).unwrap());
             0
         }
-        Some("off") => {
-            let mut cfg = read_cfg(); cfg.as_object_mut().map(|o| o.remove("profile"));
+        Some("ephemeral") | Some("off") => {
+            let mut cfg = read_cfg(); cfg["ephemeral"] = json!(true); cfg.as_object_mut().map(|o| o.remove("profile"));
             if let Err(e) = write_cfg(&cfg) { eprintln!("{e}"); return 1; }
-            eprintln!("Profile off; using ephemeral sessions again. Restart the daemon: browser shutdown");
+            eprintln!("Ephemeral (throwaway) sessions now — no login persists. Restart the daemon: browser shutdown");
             0
         }
-        Some(name) => {
-            if name.starts_with('-') { eprintln!("usage: browser profile <name> [--seed] | off | status"); return 2; }
-            let dir = browser_cli::chrome::profile_dir(name);
-            if let Err(e) = std::fs::create_dir_all(&dir) { eprintln!("create {}: {e}", dir.display()); return 1; }
-            if args.iter().any(|a| a == "--seed") {
-                match seed_profile(&dir) { Ok(n) => eprintln!("Seeded {n} item(s) from your Chrome profile into {}", dir.display()), Err(e) => eprintln!("Seed skipped: {e}") }
+        Some("new") => match args.get(1) {
+            Some(name) => set_profile(name, args.iter().any(|a| a == "--seed")),
+            None => { eprintln!("usage: browser profile new <name> [--seed]"); 2 }
+        },
+        Some("delete") | Some("rm") => match args.get(1) {
+            Some(name) => {
+                let dir = browser_cli::chrome::profile_dir(name);
+                if !dir.exists() { eprintln!("no such profile: {name}"); return 1; }
+                if let Err(e) = std::fs::remove_dir_all(&dir) { eprintln!("delete {}: {e}", dir.display()); return 1; }
+                let mut cfg = read_cfg();
+                let was_active = cfg.get("profile").and_then(|v| v.as_str()) == Some(name.as_str()) || (cfg.get("profile").is_none() && name == "default" && !cfg.get("ephemeral").and_then(|b| b.as_bool()).unwrap_or(false));
+                if cfg.get("profile").and_then(|v| v.as_str()) == Some(name.as_str()) { cfg.as_object_mut().map(|o| o.remove("profile")); let _ = write_cfg(&cfg); }
+                eprintln!("Deleted profile '{name}' and its logins.{}", if was_active { " It was active — the next session starts a fresh 'default' (or run `browser profile ephemeral`). Restart: browser shutdown" } else { "" });
+                0
             }
-            let mut cfg = read_cfg(); cfg["profile"] = json!(name);
-            if let Err(e) = write_cfg(&cfg) { eprintln!("{e}"); return 1; }
-            println!("{}", serde_json::to_string_pretty(&json!({"profile": name, "dir": dir.to_string_lossy(), "note": "restart the daemon to apply (browser shutdown); create --show once to log in, then reuse headless"})).unwrap());
-            0
-        }
+            None => { eprintln!("usage: browser profile delete <name>"); 2 }
+        },
+        Some(name) if !name.starts_with('-') => set_profile(name, args.iter().any(|a| a == "--seed")),
+        Some(_) => { eprintln!("usage: browser profile [<name> [--seed] | new <name> | delete <name> | ephemeral | status]"); 2 }
     }
 }
 

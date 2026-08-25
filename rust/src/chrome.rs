@@ -89,11 +89,17 @@ fn managed_executable(headless: bool) -> Option<PathBuf> {
     all.into_iter().find(|p| p.exists())
 }
 
-/// Persisted profile name (a CLI-owned Chrome user-data-dir), set via `browser profile <name>`.
+/// Which persistent profile the daemon uses, or None for throwaway (ephemeral) sessions.
+/// DEFAULT is the persistent profile "default" — sign in once, every later session reuses it.
+/// Overrides: env BROWSER_EPHEMERAL=1 (throwaway, used by tests/CI), env BROWSER_PROFILE=<name>,
+/// then config.json ({"ephemeral":true} | {"profile":"<name>"}); absent = "default".
 pub fn config_profile() -> Option<String> {
-    let p = Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/config.json");
-    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(p).ok()?).ok()?;
-    v.get("profile")?.as_str().filter(|s| !s.is_empty()).map(String::from)
+    if std::env::var("BROWSER_EPHEMERAL").is_ok() { return None; }
+    if let Ok(p) = std::env::var("BROWSER_PROFILE") { return if p.is_empty() { None } else { Some(p) }; }
+    let path = Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/config.json");
+    let v: serde_json::Value = std::fs::read_to_string(path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_else(|| serde_json::json!({}));
+    if v.get("ephemeral").and_then(|b| b.as_bool()).unwrap_or(false) { return None; }
+    Some(v.get("profile").and_then(|s| s.as_str()).filter(|s| !s.is_empty()).unwrap_or("default").to_string())
 }
 
 pub fn profile_dir(name: &str) -> PathBuf {

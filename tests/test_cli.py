@@ -24,7 +24,7 @@ def _free_port():
 PORT = _free_port()
 BASE = f"http://127.0.0.1:{PORT}"
 SOCK = Path.home() / ".browser-daemon" / "socket"
-ENV = {**os.environ, "PYTHONPATH": str(ROOT), "BROWSER_FREEZE_AFTER": "1"}
+ENV = {**os.environ, "PYTHONPATH": str(ROOT), "BROWSER_FREEZE_AFTER": "1", "BROWSER_EPHEMERAL": "1"}
 
 
 CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]  # e.g. BROWSER_CLI=rust/target/release/browser

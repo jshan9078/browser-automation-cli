@@ -219,11 +219,19 @@ impl Manager {
     }
 
     pub async fn create(&mut self, visible: bool) -> Result<String, String> {
+        // First use of a persistent profile opens a visible window so the user can sign in;
+        // every later session reuses that authenticated profile (headless by default).
+        let mut visible = visible;
+        let mut first_use = false;
+        if let Some(name) = crate::chrome::config_profile() {
+            if !visible && !crate::chrome::profile_dir(&name).join("Default").exists() { visible = true; first_use = true; }
+        }
         let id = uuid::Uuid::new_v4().simple().to_string()[..8].to_string();
         self.sessions.insert(id.clone(), Session { id: id.clone(), visible, live: None, created_at: now(), last_used: Instant::now(), frozen: false, busy: 0, title: String::new(), saved_url: "about:blank".into(), saved_state: None, console: VecDeque::new() });
         if let Err(e) = self.attach(&id, visible, None).await { self.sessions.remove(&id); return Err(e); }
         self.save(&id).await;
         eprintln!("[daemon] created session {id} (visible={visible})");
+        if first_use { eprintln!("[daemon] first use of this profile: opened a window to sign in — future sessions reuse the login (run `browser shutdown` once to switch to headless)"); }
         Ok(id)
     }
 
