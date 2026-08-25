@@ -92,6 +92,8 @@ browser install [--all]                    # download headless Chromium (Chrome 
                                            # the headed build (~356 MB) downloads on first `show`, or now with --all
 browser engine [auto|managed|system|<path>]  # use your installed Chrome/Edge/Brave instead (zero download);
                                            # auto = managed build if downloaded, else the system browser
+browser profile <name> [--seed]            # persistent CLI-owned profile: log in once, reused across
+                                           # sessions and daemon restarts (--seed bootstraps from your Chrome)
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
 browser install skill                      # install the agent skill into Claude Code / Codex / OpenCode
 ```

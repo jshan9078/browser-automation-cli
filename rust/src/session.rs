@@ -82,6 +82,25 @@ impl Manager {
     }
 
     pub async fn browser(&mut self, headless: bool) -> Result<&mut Browser, String> {
+        if let Some(name) = crate::chrome::config_profile() {
+            // One browser bound to the profile's on-disk user-data-dir; its headed/headless mode is
+            // fixed for the daemon's life (a profile dir can be held by only one Chrome process).
+            let running_headless = self.browsers.headless.is_some();
+            let running = self.browsers.headless.is_some() || self.browsers.headed.is_some();
+            if running && running_headless != headless {
+                return Err(format!("profile '{name}' is running {}; run `browser shutdown`, then start in the mode you want ({} to log in)",
+                    if running_headless { "headless" } else { "headed (a window)" },
+                    if running_headless { "`create --show`" } else { "plain `create`" }));
+            }
+            if !running {
+                let dir = crate::chrome::profile_dir(&name);
+                std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+                eprintln!("[daemon] launching {} browser on profile '{name}' ({})", if headless { "headless" } else { "headed" }, dir.display());
+                let b = chrome::launch_in(headless, Some(dir)).await?;
+                if headless { self.browsers.headless = Some(b) } else { self.browsers.headed = Some(b) }
+            }
+            return Ok(self.browsers.headless.as_mut().or(self.browsers.headed.as_mut()).unwrap());
+        }
         let slot = if headless { &mut self.browsers.headless } else { &mut self.browsers.headed };
         if slot.as_ref().map(|b| !b.cdp.is_alive()).unwrap_or(true) {
             eprintln!("[daemon] launching {} browser", if headless { "headless" } else { "headed" });
@@ -108,9 +127,15 @@ impl Manager {
         let headless = !visible;
         let ua = { let b = self.browser(headless).await?; b.user_agent() };
         let cdp = self.browser(headless).await?.cdp.clone();
-        let ctx = cdp.send(None, "Target.createBrowserContext", json!({"disposeOnDetach": false})).await?;
-        let context_id = ctx["browserContextId"].as_str().ok_or("no browserContextId")?.to_string();
-        let mut create = json!({"url": "about:blank", "browserContextId": context_id});
+        // Profile mode uses Chrome's default (on-disk) context so cookies/localStorage/IndexedDB persist
+        // to the profile dir; ephemeral mode makes a throwaway context per session.
+        let profile = crate::chrome::config_profile();
+        let context_id = if profile.is_some() { String::new() } else {
+            let ctx = cdp.send(None, "Target.createBrowserContext", json!({"disposeOnDetach": false})).await?;
+            ctx["browserContextId"].as_str().ok_or("no browserContextId")?.to_string()
+        };
+        let mut create = json!({"url": "about:blank"});
+        if !context_id.is_empty() { create["browserContextId"] = json!(context_id); }
         if !headless { create["newWindow"] = json!(true); create["width"] = json!(VIEWPORT.0); create["height"] = json!(VIEWPORT.1); }
         let t = cdp.send(None, "Target.createTarget", create).await?;
         let target_id = t["targetId"].as_str().ok_or("no targetId")?.to_string();
@@ -158,11 +183,16 @@ impl Manager {
     async fn save(&mut self, id: &str) {
         let Some(s) = self.sessions.get_mut(id) else { return };
         if let Some(l) = &s.live {
-            let cookies = l.page.cdp.send(None, "Storage.getCookies", json!({"browserContextId": l.context_id})).await.ok().and_then(|v| v["cookies"].as_array().cloned()).unwrap_or_default();
-            let mut ls = s.saved_state.clone().unwrap_or_default().local_storage;
-            if let Ok(v) = l.page.call(js::LOCAL_STORAGE_DUMP, &[]).await { if v.is_object() { let o = v["origin"].clone(); ls.retain(|e| e["origin"] != o); ls.push(v); } }
-            s.saved_state = Some(SavedState { cookies, local_storage: ls });
-            s.saved_url = l.page.url().await;
+            if l.context_id.is_empty() {
+                // profile mode: the on-disk profile IS the state; just record the URL for `list`/rehydrate
+                s.saved_url = l.page.url().await;
+            } else {
+                let cookies = l.page.cdp.send(None, "Storage.getCookies", json!({"browserContextId": l.context_id})).await.ok().and_then(|v| v["cookies"].as_array().cloned()).unwrap_or_default();
+                let mut ls = s.saved_state.clone().unwrap_or_default().local_storage;
+                if let Ok(v) = l.page.call(js::LOCAL_STORAGE_DUMP, &[]).await { if v.is_object() { let o = v["origin"].clone(); ls.retain(|e| e["origin"] != o); ls.push(v); } }
+                s.saved_state = Some(SavedState { cookies, local_storage: ls });
+                s.saved_url = l.page.url().await;
+            }
         }
         let p = Persisted { url: s.saved_url.clone(), state: s.saved_state.clone(), created_at: s.created_at, title: s.title.clone(), visible: s.visible };
         let f = state_dir().join(format!("{id}.json"));
@@ -176,7 +206,7 @@ impl Manager {
         let s = self.sessions.get_mut(id).unwrap();
         if let Some(l) = s.live.take() {
             let _ = l.page.cdp.send(None, "Target.closeTarget", json!({"targetId": l.target_id})).await;
-            let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await;
+            if !l.context_id.is_empty() { let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await; }
         }
         s.frozen = false;
     }
@@ -234,7 +264,7 @@ impl Manager {
         if self.sessions[id].frozen { self.set_frozen(id, false).await; }
         if let Some(l) = self.sessions.get_mut(id).unwrap().live.take() {
             let _ = l.page.cdp.send(None, "Target.closeTarget", json!({"targetId": l.target_id})).await;
-            let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await;
+            if !l.context_id.is_empty() { let _ = l.page.cdp.send(None, "Target.disposeBrowserContext", json!({"browserContextId": l.context_id})).await; }
         }
         self.sessions.remove(id);
         let _ = std::fs::remove_file(state_dir().join(format!("{id}.json")));

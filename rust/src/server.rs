@@ -103,8 +103,13 @@ pub async fn run() -> Result<(), String> {
     let _ = std::fs::remove_file(&sock);
     crate::update::start_background_checks();
     let shared: Shared = Arc::new(Mutex::new(Manager::new()));
-    // warm the headless browser so the first `create` is fast
-    { let mut m = shared.lock().await; if let Err(e) = m.browser(true).await { eprintln!("[daemon] warning: {e}"); } }
+    // warm the headless browser so the first `create` is fast (skip in profile mode: the first
+    // `create` / `create --show` decides whether the single profile browser is headless or headed)
+    if crate::chrome::config_profile().is_none() {
+        let mut m = shared.lock().await; if let Err(e) = m.browser(true).await { eprintln!("[daemon] warning: {e}"); }
+    } else {
+        eprintln!("[daemon] profile mode: {}", crate::chrome::config_profile().unwrap());
+    }
     let listener = UnixListener::bind(&sock).map_err(|e| format!("bind {}: {e}", sock.display()))?;
     actions::set_mode(&sock, 0o600);
     let sock_ino = std::fs::metadata(&sock).ok().map(|m| { use std::os::unix::fs::MetadataExt; m.ino() });

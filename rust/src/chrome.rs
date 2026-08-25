@@ -12,6 +12,9 @@ pub const LAUNCH_ARGS: &[&str] = &[
     "--disable-features=Translate,MediaRouter,OptimizationHints", "--password-store=basic", "--use-mock-keychain",
     "--disable-search-engine-choice-screen", "--hide-scrollbars", "--mute-audio", "--remote-debugging-port=0",
 ];
+// Ephemeral-only: a mock OS keystore avoids Keychain noise, but its key is not stable across runs,
+// so it must NOT be used for a persistent profile (on-disk cookies would be undecryptable next launch).
+const EPHEMERAL_ARGS: &[&str] = &["--use-mock-keychain"];
 
 pub struct Browser {
     pub cdp: Cdp,
@@ -19,6 +22,7 @@ pub struct Browser {
     pub headless: bool,
     pub version: String,
     _user_data: PathBuf,
+    persistent: bool,  // profile dir: keep it on close (do not delete)
 }
 
 fn playwright_cache() -> PathBuf {
@@ -85,6 +89,17 @@ fn managed_executable(headless: bool) -> Option<PathBuf> {
     all.into_iter().find(|p| p.exists())
 }
 
+/// Persisted profile name (a CLI-owned Chrome user-data-dir), set via `browser profile <name>`.
+pub fn config_profile() -> Option<String> {
+    let p = Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/config.json");
+    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(p).ok()?).ok()?;
+    v.get("profile")?.as_str().filter(|s| !s.is_empty()).map(String::from)
+}
+
+pub fn profile_dir(name: &str) -> PathBuf {
+    Path::new(&std::env::var("HOME").unwrap_or_default()).join(".browser-daemon/profiles").join(name)
+}
+
 pub fn find_executable(headless: bool) -> Result<PathBuf, String> {
     if let Ok(p) = std::env::var("BROWSER_CHROME_PATH") { return Ok(PathBuf::from(p)); }
     match config_engine().as_deref() {
@@ -112,10 +127,17 @@ pub async fn launch(headless: bool) -> Result<Browser, String> {
         // e.g. headless-only install and the first `show`: fetch the missing build now
         tokio::task::spawn_blocking(move || crate::install::ensure(headless)).await.map_err(|e| e.to_string())??;
     }
+    launch_in(headless, None).await
+}
+
+/// Launch, optionally in a persistent on-disk profile dir (for `browser profile`).
+pub async fn launch_in(headless: bool, profile: Option<PathBuf>) -> Result<Browser, String> {
     let exe = find_executable(headless)?;
-    let user_data = std::env::temp_dir().join(format!("browser-daemon-{}-{}", if headless { "headless" } else { "headed" }, std::process::id()));
+    let persistent = profile.is_some();
+    let user_data = profile.unwrap_or_else(|| std::env::temp_dir().join(format!("browser-daemon-{}-{}", if headless { "headless" } else { "headed" }, std::process::id())));
     let mut cmd = Command::new(&exe);
     cmd.args(LAUNCH_ARGS).arg(format!("--user-data-dir={}", user_data.display()));
+    if !persistent { cmd.args(EPHEMERAL_ARGS); }  // persistent profiles use the real OS keystore for stable cookie encryption
     if headless { cmd.arg("--headless"); } else { cmd.arg("--window-size=1280,900"); }
     if cfg!(target_os = "linux") { cmd.arg("--no-sandbox"); }
     cmd.arg("about:blank").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped()).kill_on_drop(true);
@@ -133,14 +155,19 @@ pub async fn launch(headless: bool) -> Result<Browser, String> {
     let v = cdp.send(None, "Browser.getVersion", serde_json::json!({})).await?;
     let version = v.get("product").and_then(|p| p.as_str()).unwrap_or("Chrome/0").to_string();
     eprintln!("[daemon] using {} ({})", exe.display(), version);
-    Ok(Browser { cdp, child, headless, version, _user_data: user_data })
+    Ok(Browser { cdp, child, headless, version, _user_data: user_data, persistent })
 }
 
 impl Browser {
     pub async fn close(&mut self) {
+        // Ask Chrome to shut down gracefully and WAIT for it to exit — a persistent profile only
+        // commits batched cookie writes to its on-disk store on a clean shutdown; SIGKILL loses them.
         let _ = tokio::time::timeout(std::time::Duration::from_secs(3), self.cdp.send(None, "Browser.close", serde_json::json!({}))).await;
-        let _ = self.child.kill().await;
-        let _ = std::fs::remove_dir_all(&self._user_data);
+        match tokio::time::timeout(std::time::Duration::from_secs(8), self.child.wait()).await {
+            Ok(_) => {}
+            Err(_) => { let _ = self.child.kill().await; }
+        }
+        if !self.persistent { let _ = std::fs::remove_dir_all(&self._user_data); }
     }
     pub fn user_agent(&self) -> String {
         let major = self.version.split('/').nth(1).and_then(|v| v.split('.').next()).unwrap_or("145");

@@ -22,6 +22,9 @@ Standalone (no daemon):
                                          Which browser to launch: managed = pinned Chrome for Testing,
                                          system = your installed Chrome/Edge/Brave/Chromium (no download),
                                          auto (default) = managed if downloaded, else system
+  browser profile [<name> [--seed] | off | status]
+                                         Persistent CLI-owned profile: log in once, reused across
+                                         sessions and restarts. --seed bootstraps from your Chrome profile
 
 Daemon (auto-started on first use; run it yourself with `browser daemon`; BROWSER_NO_AUTOSTART=1 disables auto-start):
   browser create [--show]                New session (headless; --show opens a window, e.g. to log in)
@@ -408,6 +411,82 @@ fn install_skill(args: &[String]) -> i32 {
     0
 }
 
+/// `browser profile [<name> [--seed]|off|status]` — a persistent, CLI-owned Chrome profile so logins
+/// survive across sessions and daemon restarts. `--seed` copies cookies/localStorage from your real
+/// Chrome profile once, to bootstrap (best-effort; may not carry every login across OS keystores).
+fn profile_cmd(args: &[String]) -> i32 {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let cfg_path = std::path::Path::new(&home).join(".browser-daemon/config.json");
+    let read_cfg = || -> Value { std::fs::read_to_string(&cfg_path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_else(|| json!({})) };
+    let write_cfg = |cfg: &Value| -> std::io::Result<()> {
+        if let Some(d) = cfg_path.parent() { std::fs::create_dir_all(d)?; }
+        std::fs::write(&cfg_path, serde_json::to_string_pretty(cfg).unwrap())
+    };
+    match args.first().map(String::as_str) {
+        None | Some("status") => {
+            let cur = browser_cli::chrome::config_profile();
+            let dir = cur.as_ref().map(|n| browser_cli::chrome::profile_dir(n).to_string_lossy().into_owned());
+            let profiles_root = std::path::Path::new(&home).join(".browser-daemon/profiles");
+            let existing: Vec<String> = std::fs::read_dir(&profiles_root).ok().map(|rd| rd.flatten().filter(|e| e.path().is_dir()).map(|e| e.file_name().to_string_lossy().into_owned()).collect()).unwrap_or_default();
+            println!("{}", serde_json::to_string_pretty(&json!({"active": cur, "dir": dir, "profiles": existing})).unwrap());
+            0
+        }
+        Some("off") => {
+            let mut cfg = read_cfg(); cfg.as_object_mut().map(|o| o.remove("profile"));
+            if let Err(e) = write_cfg(&cfg) { eprintln!("{e}"); return 1; }
+            eprintln!("Profile off; using ephemeral sessions again. Restart the daemon: browser shutdown");
+            0
+        }
+        Some(name) => {
+            if name.starts_with('-') { eprintln!("usage: browser profile <name> [--seed] | off | status"); return 2; }
+            let dir = browser_cli::chrome::profile_dir(name);
+            if let Err(e) = std::fs::create_dir_all(&dir) { eprintln!("create {}: {e}", dir.display()); return 1; }
+            if args.iter().any(|a| a == "--seed") {
+                match seed_profile(&dir) { Ok(n) => eprintln!("Seeded {n} item(s) from your Chrome profile into {}", dir.display()), Err(e) => eprintln!("Seed skipped: {e}") }
+            }
+            let mut cfg = read_cfg(); cfg["profile"] = json!(name);
+            if let Err(e) = write_cfg(&cfg) { eprintln!("{e}"); return 1; }
+            println!("{}", serde_json::to_string_pretty(&json!({"profile": name, "dir": dir.to_string_lossy(), "note": "restart the daemon to apply (browser shutdown); create --show once to log in, then reuse headless"})).unwrap());
+            0
+        }
+    }
+}
+
+/// Copy the auth-relevant files from the user's real default Chrome profile into `dir` (best-effort).
+fn seed_profile(dir: &std::path::Path) -> Result<usize, String> {
+    let home = std::env::var("HOME").map_err(|_| "no HOME")?;
+    let src_root = if cfg!(target_os = "macos") { std::path::Path::new(&home).join("Library/Application Support/Google/Chrome") } else { std::path::Path::new(&home).join(".config/google-chrome") };
+    if !src_root.exists() { return Err(format!("no Chrome profile at {}", src_root.display())); }
+    // last-used profile from Local State
+    let last = std::fs::read_to_string(src_root.join("Local State")).ok()
+        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+        .and_then(|v| v["profile"]["last_used"].as_str().map(String::from))
+        .unwrap_or_else(|| "Default".into());
+    let src = src_root.join(&last);
+    if !src.exists() { return Err(format!("profile dir {} not found", src.display())); }
+    let dst = dir.join("Default");
+    std::fs::create_dir_all(&dst).map_err(|e| e.to_string())?;
+    // the OS-keystore master key lives in Local State; copy it so cookies stay decryptable (macOS/Linux)
+    let _ = std::fs::copy(src_root.join("Local State"), dir.join("Local State"));
+    let mut n = 0;
+    for name in ["Cookies", "Local Storage", "IndexedDB", "Login Data", "Web Data", "Preferences", "Network"] {
+        let s = src.join(name);
+        if s.is_file() { if std::fs::copy(&s, dst.join(name)).is_ok() { n += 1; } }
+        else if s.is_dir() { if copy_dir(&s, &dst.join(name)).is_ok() { n += 1; } }
+    }
+    if n == 0 { return Err("nothing copied (profile may be empty)".into()); }
+    Ok(n)
+}
+
+fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for e in std::fs::read_dir(src)? {
+        let e = e?; let p = e.path(); let d = dst.join(e.file_name());
+        if p.is_dir() { copy_dir(&p, &d)?; } else { std::fs::copy(&p, &d)?; }
+    }
+    Ok(())
+}
+
 /// `browser engine [auto|managed|system|<path>]` — choose which browser binary the daemon launches.
 fn engine_cmd(args: &[String]) -> i32 {
     let home = std::env::var("HOME").unwrap_or_default();
@@ -456,6 +535,7 @@ fn main() {
         "install" => match browser_cli::install::run(&args[1..]) { Ok(()) => 0, Err(e) => { eprintln!("{}", err_json(&e)); 1 } },
         "update" => update_cmd(),
         "engine" => engine_cmd(&args[1..]),
+        "profile" => profile_cmd(&args[1..]),
         "cleanup" => cleanup(),
         "create" => {
             let visible = args[1..].iter().any(|a| matches!(a.as_str(), "--show" | "--visible" | "--headed"));
