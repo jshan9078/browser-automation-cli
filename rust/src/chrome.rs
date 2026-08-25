@@ -138,9 +138,11 @@ pub async fn launch_in(headless: bool, profile: Option<PathBuf>) -> Result<Brows
     let mut cmd = Command::new(&exe);
     cmd.args(LAUNCH_ARGS).arg(format!("--user-data-dir={}", user_data.display()));
     if !persistent { cmd.args(EPHEMERAL_ARGS); }  // persistent profiles use the real OS keystore for stable cookie encryption
-    if headless { cmd.arg("--headless"); } else { cmd.arg("--window-size=1280,900"); }
+    // Headed: start with NO window (--no-startup-window) so there is no leftover about:blank window;
+    // the session's own Target.createTarget is then the only window. Headless keeps a blank start page.
+    if headless { cmd.arg("--headless").arg("about:blank"); } else { cmd.arg("--window-size=1280,900").arg("--no-startup-window"); }
     if cfg!(target_os = "linux") { cmd.arg("--no-sandbox"); }
-    cmd.arg("about:blank").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped()).kill_on_drop(true);
+    cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped()).kill_on_drop(true);
     let mut child = cmd.spawn().map_err(|e| format!("launch {}: {e}", exe.display()))?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
     let mut lines = BufReader::new(stderr).lines();
