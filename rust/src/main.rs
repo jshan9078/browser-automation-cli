@@ -17,7 +17,8 @@ Standalone (no daemon):
   browser cleanup                        Kill Chromium processes started by this tool
   browser --version | update             Show version / upgrade (daily PyPI check; BROWSER_NO_UPDATE_CHECK=1 disables)
   browser install skill [target...]      Install the agent skill (SKILL.md) into Claude Code / Codex /
-                                         OpenCode skill directories (all detected when no target given)
+                                         OpenCode skill directories (all detected when no target given).
+                                         `browser update` auto-refreshes already-installed skills.
   browser engine [auto|managed|system|<path>]
                                          Which browser to launch: managed = pinned Chrome for Testing,
                                          system = your installed Chrome/Edge/Brave/Chromium (no download),
@@ -349,7 +350,15 @@ fn update_cmd() -> i32 {
     if browser_cli::update::is_newer(latest, browser_cli::update::CURRENT) {
         println!("{latest} available (you have {}). Upgrading with: uv tool upgrade browser-automation-cli", browser_cli::update::CURRENT);
         let st = Command::new("uv").args(["tool", "upgrade", "browser-automation-cli"]).status();
-        match st { Ok(s) if s.success() => { println!("Restart the daemon to use the new version: browser shutdown && browser-daemon &"); 0 } _ => { eprintln!("Upgrade failed; run it manually: uv tool upgrade browser-automation-cli (or pip install -U browser-automation-cli)"); 1 } }
+        match st {
+            Ok(s) if s.success() => {
+                // refresh already-installed agent skills using the upgraded binary (embeds the new SKILL.md)
+                if let Ok(exe) = std::env::current_exe() { let _ = Command::new(exe).args(["install", "skill", "--existing"]).status(); }
+                println!("Restart the daemon to use the new version: browser shutdown && browser-daemon &");
+                0
+            }
+            _ => { eprintln!("Upgrade failed; run it manually: uv tool upgrade browser-automation-cli (or pip install -U browser-automation-cli)"); 1 }
+        }
     } else { println!("Up to date ({}).", browser_cli::update::CURRENT); 0 }
 }
 
@@ -381,11 +390,15 @@ fn install_skill(args: &[String]) -> i32 {
         ("codex", home.join(".codex"), home.join(".codex/skills")),
         ("opencode", home.join(".config/opencode"), home.join(".config/opencode/skills")),
     ];
+    let existing_only = args.iter().any(|a| a == "--existing");
     let mut targets: Vec<(String, std::path::PathBuf)> = Vec::new();
-    if args.is_empty() {
+    if args.is_empty() || (existing_only && args.len() == 1) {
         for (name, marker, dir) in known {
-            if marker.exists() { targets.push((name.to_string(), dir.clone())); }
+            // --existing: only agents that already have our skill; else any agent that is installed
+            let take = if existing_only { dir.join("browser-cli/SKILL.md").exists() } else { marker.exists() };
+            if take { targets.push((name.to_string(), dir.clone())); }
         }
+        if existing_only && targets.is_empty() { return 0; }  // nothing previously installed; quietly do nothing
         if targets.is_empty() {
             eprintln!("No agent directories found (~/.claude, ~/.codex, ~/.config/opencode).");
             eprintln!("Pick one explicitly: browser install skill claude|codex|opencode, or pass a skills directory path.");
