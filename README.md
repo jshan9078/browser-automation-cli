@@ -96,7 +96,8 @@ browser profile [status]                   # by DEFAULT sessions use a persisten
                                            # the first session opens a window to sign in, every later
                                            # session reuses that login. Manage it with:
 browser profile <name> | new <name>        #   switch to / create a named persistent profile
-browser profile delete <name>              #   delete a profile and its logins
+browser profile delete <name>              #   delete a profile + its logins (each is a full Chrome
+                                           #   profile, ~100 MB+; delete ones you no longer need)
 browser profile ephemeral                  #   throwaway sessions (no persisted login)
 browser cleanup                            # kill Chromium processes launched from Playwright's cache
 browser install skill                      # install the agent skill into Claude Code / Codex / OpenCode

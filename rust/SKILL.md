@@ -32,9 +32,6 @@ browser capture http://localhost:3000
 ```bash
 uv tool install browser-automation-cli && browser install    # one-time; downloads headless Chromium (~196 MB)
 # or skip the download and use the installed Chrome/Edge/Brave:  browser engine system
-# By default sessions use a persistent profile: the first `create` opens a window to sign in, and every
-# later session reuses that login. `browser profile ephemeral` for throwaway sessions; `browser profile
-# new <name>` / `delete <name>` to manage named profiles; `browser profile status` to see the current one.
 export PATH="$HOME/.local/bin:$PATH"                         # if commands are not found
 # the daemon auto-starts on the first command (run `browser daemon &` yourself to manage it; BROWSER_NO_AUTOSTART=1 disables)
 browser create                                               # prints session id
@@ -46,10 +43,18 @@ If a site needs login: `browser <id> show` → ask the user to log in in the win
 
 ## Session Model
 
-- One session = one isolated browser profile (cookies/auth). IDs are 8-char hex.
-- Sessions persist across daemon restarts; `delete` forgets them.
+- IDs are 8-char hex. By default all sessions share one persistent **profile** (logins are shared, like tabs in one browser — see Profiles below); use `browser profile ephemeral` or a separate named profile when you need isolated cookies.
+- Sessions persist across daemon restarts; `delete` forgets a session (not the profile's logins).
 - Hidden sessions are frozen/hibernated when idle; sending the next command wakes them.
 - Viewport 1280x800 desktop; `navigator.webdriver` hidden.
+
+## Profiles (persistent logins)
+
+- **Default is a persistent profile named `default`.** The first `create` opens a visible window so the user signs in once; every later session — including headless ones after a `browser shutdown` — reuses that authenticated profile. Do not ask for credentials; the user logs in in the window.
+- `browser profile status` — show the active profile and list existing ones.
+- `browser profile <name>` / `browser profile new <name>` — switch to / create a named persistent profile (e.g. a second account). Restart the daemon (`browser shutdown`) to apply.
+- `browser profile ephemeral` — throwaway sessions with no persisted login (isolated).
+- **`browser profile delete <name>` — delete a profile when it is no longer needed.** Each profile is a full Chrome profile on disk (~100 MB and growing with cache/history), so remove ones you do not need to reclaim space. This erases that profile's logins.
 
 ## Command Reference
 
@@ -57,6 +62,7 @@ If a site needs login: `browser <id> show` → ask the user to log in in the win
 browser install [--all]                 # download headless Chromium; headed build auto-downloads on first `show`
 browser --version | update              # show version / upgrade (daily check; BROWSER_NO_UPDATE_CHECK=1 disables)
 browser install skill [target...]       # install this skill into Claude Code / Codex / OpenCode
+browser profile [<name>|new <name>|delete <name>|ephemeral|status]   # persistent logins; delete unused profiles (~100 MB each)
 browser create [--show]                 # new session (--show opens a window for login)
 browser list [--table]                  # JSON list with state/visible
 browser <id> show | hide | delete
