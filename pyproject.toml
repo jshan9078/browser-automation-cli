@@ -1,0 +1,31 @@
+# Local development + test harness for browser-automation-cli.
+#
+# This is NOT the published package. The shipped wheels are built from rust/
+# (see rust/pyproject.toml, which carries the real release version). This file
+# exists only so `uv sync` / `make sync` can set up the Python test runner and
+# the legacy Python daemon/cli fallback that the test suite and the Rust binary
+# invoke as `python -m cli.main` / `python -m daemon.server`.
+[project]
+name = "browser-cli-dev"
+version = "0.0.0"
+description = "Local dev + test harness for browser-automation-cli (not published; the shipped package builds from rust/)."
+requires-python = ">=3.9"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+authors = [
+    {name = "Browser CLI Maintainers"},
+]
+dependencies = [
+    "playwright>=1.40.0",
+]
+
+[project.scripts]
+browser-daemon = "daemon.server:main"
+browser = "cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["daemon", "cli"]

@@ -7,8 +7,8 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "browser-automation-cli"
-version = "0.3.0"
+name = "browser-cli-dev"
+version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "playwright" },
