@@ -61,6 +61,17 @@ impl Page {
         }
     }
 
+    /// Recover a wedged session. A stuck renderer main thread makes Runtime.evaluate (snapshot/eval/
+    /// click) hang until the CDP timeout, and it never comes back on its own. Page.reload is handled by
+    /// the browser process (not the stuck renderer), so it replaces the renderer with a fresh one and
+    /// un-wedges the session. Bounded so recovery itself can't hang. Loses page state (the session was
+    /// already unusable), but restores a working session for the caller to retry.
+    pub async fn recover(&self) -> Result<(), String> {
+        self.send("Page.reload", json!({"ignoreCache": false})).await?;
+        let _ = self.wait_ready("interactive", 15000).await;
+        Ok(())
+    }
+
     async fn after(&self, mut result: Map<String, Value>, snap: bool, settle: bool) -> Value {
         if settle || snap { self.settle().await; }
         result.insert("url".into(), json!(self.url().await));

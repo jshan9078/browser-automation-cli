@@ -39,6 +39,13 @@ async fn dispatch(page: &Page, session_id: &str, action: &str, params: &Map<Stri
     }
 }
 
+/// True if an action failed specifically because a CDP command timed out (a wedged renderer), which is
+/// recoverable via reload — as opposed to an ordinary action failure (bad selector, JS exception, etc.).
+fn is_cdp_timeout(result: &Value) -> bool {
+    result.get("success").and_then(|v| v.as_bool()) == Some(false)
+        && result.get("error").and_then(|v| v.as_str()).map(|e| e.contains("timed out")).unwrap_or(false)
+}
+
 pub async fn process(shared: &Shared, request: &Value, shutdown: &tokio::sync::watch::Sender<bool>) -> Value {
     let action = request.get("action").and_then(|v| v.as_str()).unwrap_or("");
     let session_id = request.get("session_id").and_then(|v| v.as_str()).map(String::from);
@@ -70,7 +77,16 @@ pub async fn process(shared: &Shared, request: &Value, shutdown: &tokio::sync::w
                 _ => {
                     let page = match shared.lock().await.wake(&sid).await { Ok(p) => p, Err(e) => return json!({"success": false, "error": e}) };
                     // the manager lock is NOT held while the action runs, so other sessions proceed in parallel
-                    let result = dispatch(&page, &sid, action, &params, shared).await;
+                    let mut result = dispatch(&page, &sid, action, &params, shared).await;
+                    // Wedge recovery: a CDP timeout means the renderer main thread is stuck (commands hang
+                    // and never recover on their own). Page.reload replaces the renderer with a fresh one;
+                    // then retry the command ONCE. Skipped for navigate (it already loads a fresh document).
+                    if is_cdp_timeout(&result) && action != "navigate" {
+                        if page.recover().await.is_ok() {
+                            result = dispatch(&page, &sid, action, &params, shared).await;
+                            if let Some(o) = result.as_object_mut() { o.insert("recovered".into(), json!(true)); }
+                        }
+                    }
                     let title = page.title().await;
                     let mut m = shared.lock().await;
                     if let Some(s) = m.sessions.get_mut(&sid) { s.title = title; }

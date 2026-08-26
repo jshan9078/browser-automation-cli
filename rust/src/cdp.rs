@@ -63,7 +63,11 @@ impl Cdp {
         let mut msg = json!({"id": id, "method": method, "params": params});
         if let Some(sid) = session { msg["sessionId"] = json!(sid); }
         self.tx.send(msg.to_string()).map_err(|_| "cdp send: connection closed".to_string())?;
-        match tokio::time::timeout(std::time::Duration::from_secs(60), r).await {
+        // Per-command timeout. Configurable via BROWSER_CDP_TIMEOUT_MS so a wedged renderer fails fast
+        // (default 60s, unchanged). On timeout the pending entry is dropped and the caller gets an error
+        // it can act on (server.rs then attempts a reload-based recovery).
+        let timeout_ms: u64 = std::env::var("BROWSER_CDP_TIMEOUT_MS").ok().and_then(|v| v.parse().ok()).filter(|&v| v > 0).unwrap_or(60_000);
+        match tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), r).await {
             Ok(Ok(v)) => v,
             Ok(Err(_)) => Err("cdp: response channel dropped".into()),
             Err(_) => { self.pending.lock().unwrap().remove(&id); Err(format!("cdp: {method} timed out")) }
