@@ -31,7 +31,27 @@ RELEASE.md
 scratch/agentbench/results/calls.log
 scratch/agentbench/results/current.json
 
-# webbench run artifacts (contain PII / large; keep code only)
+# webbench: publish per-task result JSONs (results/*.json, *.jsonl) + dashboard.
+# Keep videos / screenshots / full traces (raw/) and local run output out.
+# (*.log is already ignored globally above.)
 scratch/webbench/raw/
-scratch/webbench/results/
 scratch/webbench/archive/
+scratch/webbench/results/*.out
+scratch/webbench/results/*.html
+scratch/webbench/results/dashboard.html
+
+# busbench (BU Bench V1): browser-use's benchmark is ENCRYPTED on purpose to keep
+# tasks + gold answers secret. Publish methodology + the sanitized aggregate (RESULTS.md)
+# ONLY. Never publish per-task tasks/answers/traces or the decrypted report.
+scratch/busbench/BU_Bench_V1.enc
+scratch/busbench/raw/
+scratch/busbench/raw_mac/
+scratch/busbench/results/
+scratch/busbench/results_aws/
+scratch/busbench/results_mac/
+scratch/busbench/logs_mac/
+scratch/busbench/FINAL_REPORT.txt
+scratch/busbench/system_prompt_bu_reference.md
+
+# python caches
+scratch/**/__pycache__/
