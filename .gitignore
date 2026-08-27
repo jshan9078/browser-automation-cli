@@ -52,6 +52,10 @@ scratch/busbench/results_mac/
 scratch/busbench/logs_mac/
 scratch/busbench/FINAL_REPORT.txt
 scratch/busbench/system_prompt_bu_reference.md
+# local rerun/recompute scripts + leaderboard (kept locally, not published;
+# already-tracked run_suite.sh stays tracked). leaderboard may embed per-task results.
+scratch/busbench/*.sh
+scratch/busbench/leaderboard.html
 
 # python caches
 scratch/**/__pycache__/
