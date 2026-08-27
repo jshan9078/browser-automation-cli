@@ -15,6 +15,16 @@ Coding agents need to interact with authenticated web apps. Existing solutions a
 
 Browser CLI solves this with a persistent daemon that any agent can call via subprocess. No extensions, no MCP config, no SDKs, no ecosystem lock-in. Sessions persist across agent calls (and daemon restarts) so you only log in once.
 
+## Benchmarks
+
+On [BU Bench V1](https://github.com/browser-use/benchmark) (browser-use's 100-task benchmark, `opus-4-7`,
+scored by their `gemini-2.5-flash` judge), Claude Code + browser-automation-cli tops every published
+harness × browser-tool configuration:
+
+![BU Bench V1 results](https://raw.githubusercontent.com/jshan9078/browser-automation-cli/main/docs/busbench-results.png)
+
+Methodology and per-task scores: [`benchmarks/busbench/`](benchmarks/busbench/RESULTS.md).
+
 ## Install
 
 ```bash
