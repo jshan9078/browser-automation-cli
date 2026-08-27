@@ -1,0 +1,24 @@
+{
+  "task_id": "2085c51b-7e1a-417e-8725-b534e5a39090",
+  "category": "OM2W2",
+  "model": "claude-opus-4-7",
+  "effort": "(default)",
+  "verdict": false,
+  "score": 0,
+  "votes": [
+    false,
+    false,
+    true
+  ],
+  "n_true": 1,
+  "n_votes": 3,
+  "judge_model": "gemini-2.5-flash",
+  "judge_temperature": 0.5,
+  "impossible_task": false,
+  "reached_captcha": false,
+  "agent_tokens": 690716,
+  "cli_calls": 25,
+  "wall_s": 137.7,
+  "cost_usd": 0.8319825,
+  "n_screenshots": 5
+}

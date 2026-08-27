@@ -4,12 +4,18 @@ Aggregate result for **browser-automation-cli + Claude Code** on
 [BU Bench V1](https://github.com/browser-use/benchmark) (100 tasks, `opus-4-7`,
 `gemini-2.5-flash` judge — their exact rubric). See `README.md` for the full fairness setup.
 
-> **Why no per-task files here.** BU Bench V1 is distributed **encrypted**
-> (`BU_Bench_V1.enc`) so its tasks and gold answers stay secret. Our per-task result
-> files contain the decrypted task content, agent answers, reasoning, and (for some
-> tasks) the gold `ground_truth`. Publishing them would leak the benchmark, so they are
-> git-ignored (`results/`, `raw/`) and never committed. Only this aggregate + the harness
-> code are published. To recompute, decrypt the benchmark yourself and run `run_suite.sh`.
+## Per-task scores
+
+Published per task under `results/<task_id>/score.json` — **metadata only**: the judge verdict
+(`score`, `votes`, `override`), category, and cost/token/timing metrics. See any file for the exact
+shape.
+
+> **What is deliberately NOT published.** BU Bench V1 is distributed **encrypted** so its tasks and
+> gold answers stay secret. The full per-task record — `full.json` (agent `final_answer`, `reasoning`,
+> and the gold `ground_truth`), agent traces (`trace.json`, `stream.txt`), and screenshots (`shots/`) —
+> stays **local and git-ignored**; publishing it would leak the benchmark. The published `score.json`
+> is stripped of all of that. To recompute, re-fetch the encrypted benchmark from browser-use/benchmark
+> and run `run_suite.sh`.
 
 ## Headline
 

@@ -42,9 +42,12 @@ benchmarks/webbench/results/*.html
 benchmarks/webbench/results/dashboard.html
 
 # busbench (BU Bench V1): browser-use's benchmark keeps its tasks + gold answers secret.
-# Publish methodology + the sanitized aggregate (RESULTS.md) ONLY. The per-task record under
-# results/ (one dir per task: scores, traces, screenshots, answers) is local — never published.
-benchmarks/busbench/results/
+# Publish the sanitized aggregate (RESULTS.md) + per-task sanitized score.json ONLY.
+# The full per-task record (full.json with answers/ground-truth, traces, streams, screenshots,
+# and the local README index) stays local — never published.
+benchmarks/busbench/results/**
+!benchmarks/busbench/results/*/
+!benchmarks/busbench/results/*/score.json
 benchmarks/busbench/system_prompt_bu_reference.md
 # local rerun/recompute scripts + leaderboard (kept locally, not published).
 # run_suite.sh IS published (the recompute driver); leaderboard may embed per-task results.

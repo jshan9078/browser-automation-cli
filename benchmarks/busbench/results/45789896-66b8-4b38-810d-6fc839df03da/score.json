@@ -1,0 +1,24 @@
+{
+  "task_id": "45789896-66b8-4b38-810d-6fc839df03da",
+  "category": "InteractionTests",
+  "model": "claude-opus-4-7",
+  "effort": "(default)",
+  "verdict": true,
+  "score": 1,
+  "votes": [
+    true,
+    false,
+    true
+  ],
+  "n_true": 2,
+  "n_votes": 3,
+  "judge_model": "gemini-2.5-flash",
+  "judge_temperature": 0.5,
+  "impossible_task": false,
+  "reached_captcha": false,
+  "agent_tokens": 1653545,
+  "cli_calls": 43,
+  "wall_s": 157.0,
+  "cost_usd": 1.2391989999999997,
+  "n_screenshots": 7
+}

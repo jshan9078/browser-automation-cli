@@ -1,0 +1,24 @@
+{
+  "task_id": "c9f78efb-bdae-40fb-b4b4-78a859e506d7",
+  "category": "WebBenchREAD",
+  "model": "claude-opus-4-7",
+  "effort": "(default)",
+  "verdict": true,
+  "score": 1,
+  "votes": [
+    true,
+    true,
+    true
+  ],
+  "n_true": 3,
+  "n_votes": 3,
+  "judge_model": "gemini-2.5-flash",
+  "judge_temperature": 0.5,
+  "impossible_task": false,
+  "reached_captcha": false,
+  "agent_tokens": 1327475,
+  "cli_calls": 26,
+  "wall_s": 176.4,
+  "cost_usd": 1.2102729999999997,
+  "n_screenshots": 4
+}

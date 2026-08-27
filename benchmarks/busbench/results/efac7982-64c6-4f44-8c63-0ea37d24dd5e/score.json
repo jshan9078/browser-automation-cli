@@ -1,0 +1,24 @@
+{
+  "task_id": "efac7982-64c6-4f44-8c63-0ea37d24dd5e",
+  "category": "GAIA",
+  "model": "claude-opus-4-7",
+  "effort": "(default)",
+  "verdict": true,
+  "score": 1,
+  "votes": [
+    true,
+    true,
+    true
+  ],
+  "n_true": 3,
+  "n_votes": 3,
+  "judge_model": "gemini-2.5-flash",
+  "judge_temperature": 0.5,
+  "impossible_task": false,
+  "reached_captcha": false,
+  "agent_tokens": 567414,
+  "cli_calls": 8,
+  "wall_s": 107.8,
+  "cost_usd": 0.680743,
+  "n_screenshots": 1
+}

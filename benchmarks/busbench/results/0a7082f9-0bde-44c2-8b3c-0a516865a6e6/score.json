@@ -1,0 +1,24 @@
+{
+  "task_id": "0a7082f9-0bde-44c2-8b3c-0a516865a6e6",
+  "category": "BrowseComp",
+  "model": "claude-opus-4-7",
+  "effort": "(default)",
+  "verdict": true,
+  "score": 1,
+  "votes": [
+    true,
+    true,
+    true
+  ],
+  "n_true": 3,
+  "n_votes": 3,
+  "judge_model": "gemini-2.5-flash",
+  "judge_temperature": 0.5,
+  "impossible_task": false,
+  "reached_captcha": false,
+  "agent_tokens": 385409,
+  "cli_calls": 6,
+  "wall_s": 72.1,
+  "cost_usd": 0.46335499999999996,
+  "n_screenshots": 1
+}
