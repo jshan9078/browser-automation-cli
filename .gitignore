@@ -41,17 +41,10 @@ benchmarks/webbench/results/*.out
 benchmarks/webbench/results/*.html
 benchmarks/webbench/results/dashboard.html
 
-# busbench (BU Bench V1): browser-use's benchmark is ENCRYPTED on purpose to keep
-# tasks + gold answers secret. Publish methodology + the sanitized aggregate (RESULTS.md)
-# ONLY. Never publish per-task tasks/answers/traces or the decrypted report.
-benchmarks/busbench/BU_Bench_V1.enc
-benchmarks/busbench/raw/
-benchmarks/busbench/raw_mac/
+# busbench (BU Bench V1): browser-use's benchmark keeps its tasks + gold answers secret.
+# Publish methodology + the sanitized aggregate (RESULTS.md) ONLY. The per-task record under
+# results/ (one dir per task: scores, traces, screenshots, answers) is local — never published.
 benchmarks/busbench/results/
-benchmarks/busbench/results_aws/
-benchmarks/busbench/results_mac/
-benchmarks/busbench/logs_mac/
-benchmarks/busbench/FINAL_REPORT.txt
 benchmarks/busbench/system_prompt_bu_reference.md
 # local rerun/recompute scripts + leaderboard (kept locally, not published).
 # run_suite.sh IS published (the recompute driver); leaderboard may embed per-task results.
