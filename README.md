@@ -1,6 +1,6 @@
 # Browser Automation CLI
 
-> **If you are an LLM using this tool, read [SKILL.md](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md)** — or run `browser install skill` to add it to Claude Code / Codex / OpenCode. ([AGENTS.md](AGENTS.md) is for agents developing this repo.)
+> **If you are an LLM using this tool, read [SKILL.md](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md)**: or run `browser install skill` to add it to Claude Code / Codex / OpenCode. ([AGENTS.md](AGENTS.md) is for agents developing this repo.)
 
 A lightweight, self-hosted browser automation tool with a background daemon and CLI client. Enables authenticated web automation, screenshots, compact page snapshots, and page interactions via simple CLI commands. Share the [`SKILL.md`](https://github.com/jshan9078/browser-automation-cli/blob/main/SKILL.md) file with your coding agent harness for seamless integration.
 
@@ -8,10 +8,10 @@ A lightweight, self-hosted browser automation tool with a background daemon and 
 
 Coding agents need to interact with authenticated web apps. Existing solutions all have tradeoffs:
 
-* **Chrome DevTools MCP** — requires Node.js, per-agent MCP server configuration, Google telemetry by default, and complex setup for each coding agent
-* **BrowserMCP and similar tools** — require installing Chrome extensions, tie into specific ecosystems, and use MCP which bloats the agent's context window with tool definitions and protocol overhead
-* **Playwright/Puppeteer scripts** — require writing code for every interaction, no persistent auth state
-* **AI browser frameworks** — heavy, opinionated, and framework-locked
+* **Chrome DevTools MCP**: requires Node.js, per-agent MCP server configuration, Google telemetry by default, and complex setup for each coding agent
+* **BrowserMCP and similar tools**: require installing Chrome extensions, tie into specific ecosystems, and use MCP which bloats the agent's context window with tool definitions and protocol overhead
+* **Playwright/Puppeteer scripts**: require writing code for every interaction, no persistent auth state
+* **AI browser frameworks**: heavy, opinionated, and framework-locked
 
 Browser CLI solves this with a persistent daemon that any agent can call via subprocess. No extensions, no MCP config, no SDKs, no ecosystem lock-in. Sessions persist across agent calls (and daemon restarts) so you only log in once.
 
@@ -136,7 +136,7 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 | :-- | :-- |
 | `navigate <url> [--wait load\|domcontentloaded\|networkidle]` | Returns as soon as the page is usable; never fails on a slow `networkidle` |
 | `snapshot [scope] [--all] [--max N] [--json]` | Visible interactive elements + headings. `--all` adds text blocks, `--json` gives boxes and unique selectors |
-| `click <target> [--double]` | Also `click --at X,Y` to click raw viewport pixels (canvas / vision — no DOM target; screenshot first, pixels map 1:1) |
+| `click <target> [--double]` | Also `click --at X,Y` to click raw viewport pixels (canvas / vision, no DOM target; screenshot first, pixels map 1:1) |
 | `type <target> <text> [--sequential] [--submit]` | `fill()` by default; `--sequential` sends key events (autocomplete); `--submit` presses Enter |
 | `press <key> [target]` | `Enter`, `Tab`, `Control+a`, … |
 | `hover <target>` | |
@@ -150,16 +150,16 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 | `back` / `forward` | |
 | `batch` | JSON lines on stdin, run in one round-trip, stop at first failure |
 
-**Targets:** `@e12` (ref from snapshot — preferred) · CSS selector · `text=Create` · `role=button[name=Create]` · `label=Email` · `placeholder=Search` · or flags `--text / --role [--name] / --label / --placeholder`. Ambiguous CSS selectors are refused (strict mode) instead of clicking the first match. For canvas / vision cases with no DOM target, `click --at X,Y` clicks raw viewport pixels (take a `screenshot` first; its pixels map 1:1 to click coordinates).
+**Targets:** `@e12` (ref from snapshot, preferred) · CSS selector · `text=Create` · `role=button[name=Create]` · `label=Email` · `placeholder=Search` · or flags `--text / --role [--name] / --label / --placeholder`. Ambiguous CSS selectors are refused (strict mode) instead of clicking the first match. For canvas / vision cases with no DOM target, `click --at X,Y` clicks raw viewport pixels (take a `screenshot` first; its pixels map 1:1 to click coordinates).
 
 ***
 
 ## Architecture
 
 * **Daemon** (`browser-daemon`): Unix socket server (`~/.browser-daemon/socket`, mode 600) owning a headless Chromium, plus a headed one that exists only while some session is `show`n.
-* **CLI** (`browser`): a native Rust binary driving Chrome over raw CDP — ~2 ms per call, no Python/Node at runtime.
+* **CLI** (`browser`): a native Rust binary driving Chrome over raw CDP, ~2 ms per call, no Python/Node at runtime.
 * **Sessions**: one isolated browser context each. Hidden sessions are **frozen** after 10 s idle (script execution paused, ~3% CPU on animated dashboards; callbacks that fire while frozen are dropped, so `BROWSER_FREEZE_AFTER=0` disables it) and **hibernated** to `~/.browser-daemon/sessions/<id>.json` (cookies + storage + URL) after 10 min idle or on shutdown; they are rehydrated transparently on the next command. Tune with `BROWSER_FREEZE_AFTER` / `BROWSER_HIBERNATE_AFTER` (seconds).
-* **Resource profile** (M4, Cloudflare dashboard parked in a session): 2% CPU / 1.1 GB vs 264% CPU / 2.1 GB for v0.2. See [AGENTBENCH.md](AGENTBENCH.md) for the measurements.
+* **Resource profile** (M4, Cloudflare dashboard parked in a session): 2% CPU / 1.1 GB vs 264% CPU / 2.1 GB for v0.2. See [`benchmarks/`](benchmarks/) for methodology and measurements.
 
 ## Anti-Detection
 
@@ -194,11 +194,11 @@ Run `browser install skill` to install [`SKILL.md`](SKILL.md) into Claude Code /
 
 ## Implementation
 
-Written entirely in Rust — one binary (`browser`, with a `daemon` subcommand) plus a `browser-daemon`
-compat shim — driving Chrome over raw CDP via a websocket. No Python, Playwright, or Node at runtime:
+Written entirely in Rust, one binary (`browser`, with a `daemon` subcommand) plus a `browser-daemon`
+compat shim, driving Chrome over raw CDP via a websocket. No Python, Playwright, or Node at runtime:
 `browser install` downloads the Chrome-for-Testing build directly, and `capture` is native too. ~2 ms
-per call, daemon RSS −90 MB vs the old Python build, frame- and shadow-DOM-aware snapshots. See
-AGENTBENCH.md for measurements. Since 0.4.0 the PyPI package ships these binaries under the same name
+per call, daemon RSS −90 MB vs the old Python build, frame- and shadow-DOM-aware snapshots. See the
+[`benchmarks/`](benchmarks/) directory for measurements. Since 0.4.0 the PyPI package ships these binaries under the same name
 (wheels for Linux x86_64/aarch64, macOS arm64/x86_64).
 
 ```bash
@@ -221,7 +221,7 @@ python3 benchmarks/performance-test/compare.py baseline <label>
 | Symptom | Fix |
 | :-- | :-- |
 | `Command not found: browser` | `export PATH="$HOME/.local/bin:$PATH"` |
-| `Daemon not running` | Auto-start was disabled or failed — `browser daemon &`, check `~/.browser-daemon/daemon.log` |
+| `Daemon not running` | Auto-start was disabled or failed, `browser daemon &`, check `~/.browser-daemon/daemon.log` |
 | Browser doesn't launch | `browser install` |
 | `Session not found` | `browser list` |
 | `ref @eN is unknown or stale` | Page changed; run `snapshot` again |

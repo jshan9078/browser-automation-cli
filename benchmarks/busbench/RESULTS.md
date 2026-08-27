@@ -1,19 +1,18 @@
-# BU Bench V1 — results (browser-automation-cli + Claude Code)
+# BU Bench V1: results (browser-automation-cli + Claude Code)
 
 Aggregate result for **browser-automation-cli + Claude Code** on
 [BU Bench V1](https://github.com/browser-use/benchmark) (100 tasks, `opus-4-7`,
-`gemini-2.5-flash` judge — their exact rubric). See `README.md` for the full fairness setup.
+`gemini-2.5-flash` judge, their exact rubric). See `README.md` for the full fairness setup.
 
 ## Per-task scores
 
-Published per task under `results/<task_id>/score.json` — **metadata only**: the judge verdict
+Published per task under `results/<task_id>/score.json`, **metadata only**: the judge verdict
 (`score`, `votes`, `override`), category, and cost/token/timing metrics. See any file for the exact
 shape.
 
 > **What is deliberately NOT published.** BU Bench V1 is distributed **encrypted** so its tasks and
-> gold answers stay secret. The full per-task record — `full.json` (agent `final_answer`, `reasoning`,
-> and the gold `ground_truth`), agent traces (`trace.json`, `stream.txt`), and screenshots (`shots/`) —
-> stays **local and git-ignored**; publishing it would leak the benchmark. The published `score.json`
+> gold answers stay secret. The full per-task record, `full.json` (agent `final_answer`, `reasoning`,
+> and the gold `ground_truth`), agent traces (`trace.json`, `stream.txt`), and screenshots (`shots/`), > stays **local and git-ignored**; publishing it would leak the benchmark. The published `score.json`
 > is stripped of all of that. To recompute, re-fetch the encrypted benchmark from browser-use/benchmark
 > and run `run_suite.sh`.
 
@@ -24,7 +23,7 @@ shape.
 | Accuracy (ground-truth-verified) | **87 / 100** | 74 |
 | Raw `gemini-2.5-flash` judge (identical to BU) | **82 / 100** | 74 |
 
-Same 100 tasks, same judge model and rubric, same `opus-4-7`, default thinking — only the
+Same 100 tasks, same judge model and rubric, same `opus-4-7`, default thinking, only the
 browser tool differs (browser-automation-cli vs BU's browser-harness).
 
 ## By category (ground-truth-verified, /20 each)
