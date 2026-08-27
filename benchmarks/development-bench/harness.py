@@ -7,8 +7,8 @@ import json, os, re, statistics, subprocess, sys, time, urllib.request
 from pathlib import Path
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parents[1]
 PY = str(ROOT / ".venv/bin/python"); PORT = 8790
-CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]
-DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.server"]; BASE = f"http://127.0.0.1:{PORT}"
+CLI = os.environ.get("BROWSER_CLI", "").split() or [str(ROOT / "target/release/browser")]
+DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [str(ROOT / "target/release/browser-daemon")]; BASE = f"http://127.0.0.1:{PORT}"
 SOCK = Path.home() / ".browser-daemon" / "socket"; RES = HERE / "results"; RES.mkdir(exist_ok=True)
 LOG = HERE / "results" / "calls.log"; META = HERE / "results" / "current.json"
 ENV = {**os.environ, "PYTHONPATH": str(ROOT)}

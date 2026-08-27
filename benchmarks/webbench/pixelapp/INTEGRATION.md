@@ -3,7 +3,7 @@
 Everything here is staged so it doesn't disturb the running sweep. Apply once the sweep is done.
 
 ## Prereqs (built, not yet deployed)
-- **Coord-click feature** is in the Rust source and compiled: `rust/target/release/browser`
+- **Coord-click feature** is in the Rust source and compiled: `target/release/browser`
   (`click --at X,Y` → raw viewport-pixel click via `Input.dispatchMouseEvent`). The INSTALLED
   `~/.local/bin/browser` (0.7.2) does NOT have it, so the pixel task must run against the new binary.
 - **App**: `benchmarks/webbench/pixelapp/server.py` (server-rendered scene; validated).
@@ -14,8 +14,8 @@ Point the harness at the freshly built binary (its daemon has coord-click). Do t
 
 ```bash
 cd /Users/jonathan/Desktop/browser-cli/benchmarks/webbench
-export BROWSER_CLI="$PWD/../../rust/target/release/browser"
-export BROWSER_DAEMON="$PWD/../../rust/target/release/browser daemon"
+export BROWSER_CLI="$PWD/../../target/release/browser"
+export BROWSER_DAEMON="$PWD/../../target/release/browser daemon"
 # (stop the old daemon first so the new binary's daemon is the one serving:)
 ~/.local/bin/browser shutdown 2>/dev/null; pkill -f "browser daemon" 2>/dev/null; sleep 1
 ```

@@ -4,49 +4,43 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
-    paths: ["rust/**", "tests/**", "benchmarks/performance-test/site/**", ".github/workflows/rust-wheels.yml"]
+    paths: ["src/**", "Cargo.toml", "Cargo.lock", "pyproject.toml", "install.sh", "tests/**", "benchmarks/performance-test/site/**", ".github/workflows/rust-wheels.yml"]
   pull_request:
-    paths: ["rust/**", "tests/**", ".github/workflows/rust-wheels.yml"]
+    paths: ["src/**", "Cargo.toml", "Cargo.lock", "pyproject.toml", "tests/**", ".github/workflows/rust-wheels.yml"]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  # Linux validation: the Python end-to-end suite driven against the Rust daemon + Rust client.
+  # Linux validation: the end-to-end suite driven against the Rust daemon + Rust client.
   test-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
       - uses: astral-sh/setup-uv@v4
       - name: Build
-        run: cd rust && cargo build --release
-      - name: Python deps (test runner only) + system libs for Chromium
-        run: |
-          uv sync
-          uv run playwright install-deps chromium
+        run: cargo build --release
+      - name: System libs for Chromium (via ephemeral playwright; no project dependency)
+        run: uvx playwright install-deps chromium
       - name: Native browser install (validates the Rust installer on Linux)
-        run: rust/target/release/browser install
+        run: target/release/browser install
       - name: End-to-end tests on the Rust daemon
         env:
-          BROWSER_CLI: ${{ github.workspace }}/rust/target/release/browser
-          BROWSER_DAEMON: ${{ github.workspace }}/rust/target/release/browser-daemon
-          PYTHONPATH: ${{ github.workspace }}
+          BROWSER_CLI: ${{ github.workspace }}/target/release/browser
+          BROWSER_DAEMON: ${{ github.workspace }}/target/release/browser-daemon
           BROWSER_EPHEMERAL: "1"
-        run: uv run python -m unittest -v tests/test_cli.py
+        run: python3 -m unittest -v tests/test_cli.py
       - name: End-to-end tests again with engine=system (the runner's installed Chrome)
         env:
-          BROWSER_CLI: ${{ github.workspace }}/rust/target/release/browser
-          BROWSER_DAEMON: ${{ github.workspace }}/rust/target/release/browser-daemon
-          PYTHONPATH: ${{ github.workspace }}
+          BROWSER_CLI: ${{ github.workspace }}/target/release/browser
+          BROWSER_DAEMON: ${{ github.workspace }}/target/release/browser-daemon
         run: |
-          rust/target/release/browser engine system
-          BROWSER_EPHEMERAL=1 uv run python -m unittest tests/test_cli.py
-          rust/target/release/browser engine auto
+          target/release/browser engine system
+          BROWSER_EPHEMERAL=1 python3 -m unittest tests/test_cli.py
+          target/release/browser engine auto
       - name: Daemon log on failure
         if: failure()
         run: cat /tmp/test-daemon.log || true
@@ -64,38 +58,33 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Sync the package README (PyPI description) from the repo README
-        run: cp README.md SKILL.md rust/
       - uses: PyO3/maturin-action@v1
         with:
-          working-directory: rust
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux || '' }}
           args: --release --out dist
       - name: Smoke the client binary (every matrix entry builds natively)
         run: |
           set -e
-          pip install rust/dist/*.whl
+          pip install dist/*.whl
           browser --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.os }}-${{ matrix.target }}
-          path: rust/dist/*.whl
+          path: dist/*.whl
 
   sdist:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cp README.md SKILL.md rust/
       - uses: PyO3/maturin-action@v1
         with:
-          working-directory: rust
           command: sdist
           args: --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
-          path: rust/dist/*.tar.gz
+          path: dist/*.tar.gz
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -123,9 +112,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --notes "See OPTIMIZATION.md and AGENTBENCH.md for measurements." --generate-notes
+          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --notes "See AGENTBENCH.md for measurements." --generate-notes
           gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
-      - name: Publish to PyPI (only when the PYPI_API_TOKEN secret is set; same project name as the Python package)
+      - name: Publish to PyPI (only when the PYPI_API_TOKEN secret is set)
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |

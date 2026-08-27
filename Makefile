@@ -1,29 +1,24 @@
-.PHONY: install daemon cli help sync build
+.PHONY: build install wheel daemon help
 
 help:
-	@echo "Browser CLI - Usage"
+	@echo "Browser CLI (Rust) - Usage"
 	@echo ""
-	@echo "  make install          Install dependencies and commands"
-	@echo "  make sync             Sync dependencies with uv"
-	@echo "  make build            Build distribution packages"
-	@echo "  make daemon          Start the browser daemon (background)"
-	@echo "  browser create       Create new session"
-	@echo "  browser list         List sessions"
-	@echo "  browser <id> <cmd>   Run command on session"
-
-install:
-	@uv tool install .
-	@uv run playwright install chromium
-
-sync:
-	@uv sync
+	@echo "  make build            cargo build --release"
+	@echo "  make install          build + download Chromium"
+	@echo "  make wheel            build the PyPI wheel via maturin"
+	@echo "  make daemon           start the browser daemon (foreground)"
+	@echo "  browser create        create a new session"
+	@echo "  browser list          list sessions"
+	@echo "  browser <id> <cmd>    run a command on a session"
 
 build:
-	@uv build
+	@cargo build --release
+
+install: build
+	@./target/release/browser install
+
+wheel:
+	@uvx maturin build --release
 
 daemon:
-	@browser-daemon
-
-start-daemon:
-	@browser-daemon &
-	@echo "Daemon started in background"
+	@./target/release/browser daemon

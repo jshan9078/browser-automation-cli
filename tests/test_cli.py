@@ -27,7 +27,7 @@ SOCK = Path.home() / ".browser-daemon" / "socket"
 ENV = {**os.environ, "PYTHONPATH": str(ROOT), "BROWSER_FREEZE_AFTER": "1", "BROWSER_EPHEMERAL": "1"}
 
 
-CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]  # e.g. BROWSER_CLI=rust/target/release/browser
+CLI = os.environ.get("BROWSER_CLI", "").split() or [str(ROOT / "target/release/browser")]  # override with BROWSER_CLI
 
 
 def cli(*args, stdin=None):
@@ -51,7 +51,7 @@ class DaemonTests(unittest.TestCase):
             time.sleep(0.1)
         SOCK.unlink(missing_ok=True)  # stale socket from a killed daemon
         cls.site = subprocess.Popen([PY, str(SITE / "server.py"), str(PORT)])
-        daemon_cmd = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.server"]  # e.g. rust/target/release/browser-daemon
+        daemon_cmd = os.environ.get("BROWSER_DAEMON", "").split() or [str(ROOT / "target/release/browser-daemon")]  # override with BROWSER_DAEMON
         cls.daemon = subprocess.Popen(daemon_cmd, env=ENV, stdout=subprocess.DEVNULL, stderr=open("/tmp/test-daemon.log", "w"))
         deadline = time.time() + 15
         while not SOCK.exists() and time.time() < deadline:
@@ -201,21 +201,6 @@ class DaemonTests(unittest.TestCase):
 
     def test_socket_permissions(self):
         self.assertEqual(oct(SOCK.stat().st_mode & 0o777), "0o600")
-
-
-class CliParsingTests(unittest.TestCase):
-    def test_capture_flag_parsing(self):
-        from cli.main import parse_flags
-        pos, f = parse_flags(["https://x", "-f", "-o", "out.jpg"], {"-f", "--full-page"}, {"-o", "--output"})
-        self.assertEqual(pos, ["https://x"])
-        self.assertEqual(f, {"f": True, "o": "out.jpg"})
-
-    def test_build_requests(self):
-        from cli.main import build
-        self.assertEqual(build("s", "click", ["@e3", "-s"]), {"action": "click", "session_id": "s", "params": {"selector": "@e3", "snap": True}})
-        self.assertEqual(build("s", "type", ["--label", "Name", "val"])["params"], {"selector": "", "text_value": "val", "label": "Name"})
-        self.assertIsNone(build("s", "type", ["only-one-arg"]))
-        self.assertEqual(build("s", "scroll", ["up", "300"])["params"], {"direction": "up", "amount": 300})
 
 
 if __name__ == "__main__":

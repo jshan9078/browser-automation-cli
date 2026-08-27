@@ -1,6 +1,7 @@
 # Build artifacts
 dist/
 build/
+target/
 *.egg-info/
 *.egg
 

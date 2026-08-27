@@ -182,28 +182,28 @@ Errors (exit code 1):
 
 Run `browser install skill` to install [`SKILL.md`](SKILL.md) into Claude Code / Codex / OpenCode, or share the file with any other harness.
 
-## Rust implementation
+## Implementation
 
-`rust/` holds the Rust client and daemon — the **shipped implementation** since 0.4.0. Same CLI and
-socket protocol, no Python, Playwright, or Node at runtime: `browser install` downloads the same
-Chrome-for-Testing build Playwright pins (into the same cache), and `capture` is native too. Per-call
-overhead 40 ms → 2 ms, daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See AGENTBENCH.md.
-Since 0.4.0 the PyPI package ships these Rust binaries under the same name (wheels for Linux
-x86_64/aarch64, macOS arm64/x86_64); the Python implementation stays in `cli/` and `daemon/` as a
-reference and protocol oracle.
+Written entirely in Rust — one binary (`browser`, with a `daemon` subcommand) plus a `browser-daemon`
+compat shim — driving Chrome over raw CDP via a websocket. No Python, Playwright, or Node at runtime:
+`browser install` downloads the Chrome-for-Testing build directly, and `capture` is native too. ~2 ms
+per call, daemon RSS −90 MB vs the old Python build, frame- and shadow-DOM-aware snapshots. See
+AGENTBENCH.md for measurements. Since 0.4.0 the PyPI package ships these binaries under the same name
+(wheels for Linux x86_64/aarch64, macOS arm64/x86_64).
 
 ```bash
-cd rust && cargo build --release
+cargo build --release
 ./target/release/browser list          # the daemon auto-starts (`browser daemon` runs it in the foreground)
 ```
 
 ## Development
 
 ```bash
-uv sync
-.venv/bin/python -m unittest -v tests/test_cli.py          # end-to-end tests against benchmarks/performance-test/site
-.venv/bin/python benchmarks/performance-test/run.py <label>              # benchmark (latency, tokens, idle CPU/RSS)
-.venv/bin/python benchmarks/performance-test/compare.py baseline <label>
+cargo build --release
+BROWSER_CLI=$PWD/target/release/browser BROWSER_DAEMON=$PWD/target/release/browser-daemon \
+  python3 -m unittest -v tests/test_cli.py                        # end-to-end tests (needs python3 + a Chromium)
+python3 benchmarks/performance-test/run.py <label>               # benchmark (latency, tokens, idle CPU/RSS)
+python3 benchmarks/performance-test/compare.py baseline <label>
 ```
 
 ## Troubleshooting
@@ -218,21 +218,18 @@ uv sync
 | `strict mode violation` | Selector matched several elements; use an `@ref`, `--text`, or a tighter selector |
 | Stale Chromium processes | `browser cleanup` |
 
-### Installing the Rust binaries
+### Installing the binaries
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jshan9078/browser-automation-cli/main/rust/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jshan9078/browser-automation-cli/main/install.sh | sh
 ```
 
-or simply `uv tool install browser-automation-cli` (0.4.0+ wheels are the Rust binaries). The script installs
-`browser` and `browser-daemon` into `~/.local/bin` (set `BROWSER_CLI_BIN` to change); other platforms: `cd rust && cargo build --release`.
+or simply `uv tool install browser-automation-cli` (the PyPI wheels are the Rust binaries). The script installs
+`browser` and `browser-daemon` into `~/.local/bin` (set `BROWSER_CLI_BIN` to change); to build from source: `cargo build --release`.
 
-Wheel (same PyPI project name, so download stats carry over): `cd rust && uvx maturin build --release` →
-`uv tool install rust/target/wheels/browser_automation_cli-*.whl`. From 0.4.0 the PyPI package ships
-the Rust binaries; the Python implementation remains in `cli/` and `daemon/` for reference and for
-`python -m daemon.server`.
+Wheel: `uvx maturin build --release` → `uv tool install target/wheels/browser_automation_cli-*.whl`.
 
 CI (`.github/workflows/rust-wheels.yml`) builds wheels for Linux x86_64/aarch64 and macOS arm64/x86_64 on every
-push touching `rust/`, runs the end-to-end suite against the Rust daemon on Linux, attaches wheels to the release
+push touching the Rust sources, runs the end-to-end suite against the Rust daemon on Linux, attaches wheels to the release
 on `v*` tags, and publishes to PyPI when a `PYPI_API_TOKEN` repository secret exists. Windows is not a target: the
 daemon speaks over a Unix socket.

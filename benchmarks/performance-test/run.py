@@ -7,8 +7,8 @@ import json, os, re, statistics, subprocess, sys, time
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PY = str(ROOT / ".venv/bin/python")
-CLI = os.environ.get("BROWSER_CLI", "").split() or [PY, "-m", "cli.main"]          # e.g. rust/target/release/browser
-DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.server"]
+CLI = os.environ.get("BROWSER_CLI", "").split() or [str(ROOT / "target/release/browser")]          # e.g. target/release/browser
+DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [str(ROOT / "target/release/browser-daemon")]
 SITE = Path(__file__).parent / "site"
 PORT = 8765
 RESULTS = Path(__file__).parent / "results"; RESULTS.mkdir(exist_ok=True)

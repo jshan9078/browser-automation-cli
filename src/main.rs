@@ -1,5 +1,5 @@
-//! `browser` — thin client for browser-daemon. Speaks the same JSON-over-unix-socket protocol as
-//! cli/main.py; exists to remove the ~25 ms Python start-up from every agent call.
+//! `browser` — thin client for browser-daemon, speaking a JSON-over-unix-socket protocol.
+//! A native binary so there is no interpreter start-up cost on any agent call.
 use serde_json::{json, Map, Value};
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
@@ -271,20 +271,6 @@ fn cleanup() -> i32 {
     }
     println!("{}", if n > 0 { format!("Killed {n} Chromium process(es)") } else { "No Playwright Chromium processes found".into() });
     0
-}
-
-#[allow(dead_code)]
-fn python_fallback(args: &[String]) -> ! {
-    // capture/install need Playwright; delegate to the Python CLI if it is installed.
-    let candidates = ["browser-py", "python3"];
-    for c in candidates {
-        let mut cmd = Command::new(c);
-        if c == "python3" { cmd.arg("-m").arg("cli.main"); }
-        cmd.args(args).stdin(Stdio::inherit()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-        if let Ok(st) = cmd.status() { exit(st.code().unwrap_or(1)); }
-    }
-    eprintln!("{{\"success\": false, \"error\": \"`{}` needs the Python package (uv tool install browser-automation-cli)\"}}", args[0]);
-    exit(1);
 }
 
 fn batch(sid: &str) -> i32 {

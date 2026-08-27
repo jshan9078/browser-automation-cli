@@ -160,7 +160,7 @@ keyboard table rather than Playwright's full layout.
 ```bash
 uv sync
 .venv/bin/python -m unittest -v tests/test_cli.py                          # Python daemon
-BROWSER_CLI=$PWD/rust/target/release/browser BROWSER_DAEMON=$PWD/rust/target/release/browser-daemon \
+BROWSER_CLI=$PWD/target/release/browser BROWSER_DAEMON=$PWD/target/release/browser-daemon \
   .venv/bin/python -m unittest -v tests/test_cli.py                        # Rust daemon
 .venv/bin/python benchmarks/performance-test/run.py mychange 3 && .venv/bin/python benchmarks/performance-test/compare.py baseline final rust mychange
 .venv/bin/python benchmarks/development-bench/harness.py setup t1_create_project     # then hand the prompt to a fresh agent
