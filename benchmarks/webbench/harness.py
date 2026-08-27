@@ -36,7 +36,7 @@ SOCK = Path.home() / ".browser-daemon" / "socket"
 RLOG = Path.home() / ".browser-daemon" / "requests.log"
 ENV = {**os.environ}
 
-sys.path.insert(0, str(ROOT / "benchmarks/bench")); _a = sys.argv; sys.argv = sys.argv[:1]; import run as bench; sys.argv = _a  # noqa: E402
+sys.path.insert(0, str(ROOT / "benchmarks/performance-test")); _a = sys.argv; sys.argv = sys.argv[:1]; import run as bench; sys.argv = _a  # noqa: E402
 
 AMAZON_ITEMS = [
     {"asin": "0735211299", "title": "atomic habits"},   # book: always in stock, no shipping limits

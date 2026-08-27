@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
-    paths: ["rust/**", "tests/**", "benchmarks/bench/site/**", ".github/workflows/rust-wheels.yml"]
+    paths: ["rust/**", "tests/**", "benchmarks/performance-test/site/**", ".github/workflows/rust-wheels.yml"]
   pull_request:
     paths: ["rust/**", "tests/**", ".github/workflows/rust-wheels.yml"]
   workflow_dispatch:

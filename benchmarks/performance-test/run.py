@@ -1,7 +1,7 @@
 """Benchmark harness for browser-cli.
-Usage: .venv/bin/python benchmarks/bench/run.py <label> [--iters N] [--cli-extra ...]
+Usage: .venv/bin/python benchmarks/performance-test/run.py <label> [--iters N] [--cli-extra ...]
 Starts the local test site + the daemon from the working tree, drives it through the CLI,
-and writes benchmarks/bench/results/<label>.json. Same script runs before/after every change.
+and writes benchmarks/performance-test/results/<label>.json. Same script runs before/after every change.
 """
 import json, os, re, statistics, subprocess, sys, time
 from pathlib import Path

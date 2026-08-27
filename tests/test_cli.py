@@ -1,4 +1,4 @@
-"""End-to-end tests: real daemon + real CLI against the local test site in benchmarks/bench/site.
+"""End-to-end tests: real daemon + real CLI against the local test site in benchmarks/performance-test/site.
 
 Run:  .venv/bin/python -m unittest -v tests/test_cli.py
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PY = sys.executable
-SITE = ROOT / "benchmarks" / "bench" / "site"
+SITE = ROOT / "benchmarks" / "performance-test" / "site"
 def _free_port():
     import socket
     with socket.socket() as sk:
