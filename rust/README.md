@@ -199,9 +199,9 @@ cd rust && cargo build --release
 
 ```bash
 uv sync
-.venv/bin/python -m unittest -v tests/test_cli.py          # end-to-end tests against scratch/bench/site
-.venv/bin/python scratch/bench/run.py <label>              # benchmark (latency, tokens, idle CPU/RSS)
-.venv/bin/python scratch/bench/compare.py baseline <label>
+.venv/bin/python -m unittest -v tests/test_cli.py          # end-to-end tests against benchmarks/bench/site
+.venv/bin/python benchmarks/bench/run.py <label>              # benchmark (latency, tokens, idle CPU/RSS)
+.venv/bin/python benchmarks/bench/compare.py baseline <label>
 ```
 
 ## Troubleshooting

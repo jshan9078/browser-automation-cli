@@ -3,13 +3,13 @@
 Everything measured while taking browser-automation-cli from v0.2.1 to the Rust-based v0.4.x, in two
 layers: a **tool benchmark** (the daemon and CLI in isolation) and an **agent benchmark** (fresh LLM
 agents completing verifier-judged tasks with only the `browser` CLI). All numbers below were
-produced by the scripts in `scratch/bench/` and `scratch/agentbench/`; raw results live next to them.
+produced by the scripts in `benchmarks/bench/` and `benchmarks/development-bench/`; raw results live next to them.
 Hardware: Apple M4, 24 GB. Dates: 2026-08-22/23.
 
 ## 1. Agent benchmark
 
 ### Method
-- **Environment** — a deterministic local admin app (`scratch/agentbench/app/`): login gate, searchable
+- **Environment** — a deterministic local admin app (`benchmarks/development-bench/app/`): login gate, searchable
   paginated table, two-step wizard with autocomplete, settings form, confirm modal, inline rename, plus a
   *hard tier* where each page forces a different strategy (table below). The server keeps state in memory
   and exposes `/__state` and `/__reset` to the harness only; one live-site task (Wikipedia) is included.
@@ -101,7 +101,7 @@ The daemon now accepts the legacy payload and calls are counted daemon-side.
 
 ## 2. Tool benchmark (daemon + CLI, no LLM)
 
-`scratch/bench/run.py` drives a scripted task (create → navigate SPA → snapshot → fill form → click →
+`benchmarks/bench/run.py` drives a scripted task (create → navigate SPA → snapshot → fill form → click →
 verify → navigate → back → screenshot) through the real CLI against a local test app that reproduces the
 original failure modes (deep nav DOM, hidden consent tree, ambiguous `button.group.flex`, long-poll that
 never reaches `networkidle`), then parks a session on a page and samples CPU/RSS. Idle CPU uses
@@ -162,8 +162,8 @@ uv sync
 .venv/bin/python -m unittest -v tests/test_cli.py                          # Python daemon
 BROWSER_CLI=$PWD/rust/target/release/browser BROWSER_DAEMON=$PWD/rust/target/release/browser-daemon \
   .venv/bin/python -m unittest -v tests/test_cli.py                        # Rust daemon
-.venv/bin/python scratch/bench/run.py mychange 3 && .venv/bin/python scratch/bench/compare.py baseline final rust mychange
-.venv/bin/python scratch/agentbench/harness.py setup t1_create_project     # then hand the prompt to a fresh agent
-.venv/bin/python scratch/agentbench/harness.py verify t1_create_project run=mylabel
-.venv/bin/python scratch/agentbench/harness.py passk
+.venv/bin/python benchmarks/bench/run.py mychange 3 && .venv/bin/python benchmarks/bench/compare.py baseline final rust mychange
+.venv/bin/python benchmarks/development-bench/harness.py setup t1_create_project     # then hand the prompt to a fresh agent
+.venv/bin/python benchmarks/development-bench/harness.py verify t1_create_project run=mylabel
+.venv/bin/python benchmarks/development-bench/harness.py passk
 ```

@@ -28,34 +28,35 @@ RELEASE.md
 # Local state
 *.log
 *.tmp
-scratch/agentbench/results/calls.log
-scratch/agentbench/results/current.json
+benchmarks/development-bench/results/calls.log
+benchmarks/development-bench/results/current.json
 
 # webbench: publish per-task result JSONs (results/*.json, *.jsonl) + dashboard.
 # Keep videos / screenshots / full traces (raw/) and local run output out.
 # (*.log is already ignored globally above.)
-scratch/webbench/raw/
-scratch/webbench/archive/
-scratch/webbench/results/*.out
-scratch/webbench/results/*.html
-scratch/webbench/results/dashboard.html
+benchmarks/webbench/raw/
+benchmarks/webbench/archive/
+benchmarks/webbench/results/*.out
+benchmarks/webbench/results/*.html
+benchmarks/webbench/results/dashboard.html
 
 # busbench (BU Bench V1): browser-use's benchmark is ENCRYPTED on purpose to keep
 # tasks + gold answers secret. Publish methodology + the sanitized aggregate (RESULTS.md)
 # ONLY. Never publish per-task tasks/answers/traces or the decrypted report.
-scratch/busbench/BU_Bench_V1.enc
-scratch/busbench/raw/
-scratch/busbench/raw_mac/
-scratch/busbench/results/
-scratch/busbench/results_aws/
-scratch/busbench/results_mac/
-scratch/busbench/logs_mac/
-scratch/busbench/FINAL_REPORT.txt
-scratch/busbench/system_prompt_bu_reference.md
-# local rerun/recompute scripts + leaderboard (kept locally, not published;
-# already-tracked run_suite.sh stays tracked). leaderboard may embed per-task results.
-scratch/busbench/*.sh
-scratch/busbench/leaderboard.html
+benchmarks/busbench/BU_Bench_V1.enc
+benchmarks/busbench/raw/
+benchmarks/busbench/raw_mac/
+benchmarks/busbench/results/
+benchmarks/busbench/results_aws/
+benchmarks/busbench/results_mac/
+benchmarks/busbench/logs_mac/
+benchmarks/busbench/FINAL_REPORT.txt
+benchmarks/busbench/system_prompt_bu_reference.md
+# local rerun/recompute scripts + leaderboard (kept locally, not published).
+# run_suite.sh IS published (the recompute driver); leaderboard may embed per-task results.
+benchmarks/busbench/*.sh
+!benchmarks/busbench/run_suite.sh
+benchmarks/busbench/leaderboard.html
 
 # python caches
-scratch/**/__pycache__/
+benchmarks/**/__pycache__/

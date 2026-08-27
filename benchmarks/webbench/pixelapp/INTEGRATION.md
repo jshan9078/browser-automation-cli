@@ -6,14 +6,14 @@ Everything here is staged so it doesn't disturb the running sweep. Apply once th
 - **Coord-click feature** is in the Rust source and compiled: `rust/target/release/browser`
   (`click --at X,Y` → raw viewport-pixel click via `Input.dispatchMouseEvent`). The INSTALLED
   `~/.local/bin/browser` (0.7.2) does NOT have it, so the pixel task must run against the new binary.
-- **App**: `scratch/webbench/pixelapp/server.py` (server-rendered scene; validated).
+- **App**: `benchmarks/webbench/pixelapp/server.py` (server-rendered scene; validated).
 
 ## Run the sweep against the coord-click binary
 Point the harness at the freshly built binary (its daemon has coord-click). Do this for the whole run
 (other tasks are unaffected):
 
 ```bash
-cd /Users/jonathan/Desktop/browser-cli/scratch/webbench
+cd /Users/jonathan/Desktop/browser-cli/benchmarks/webbench
 export BROWSER_CLI="$PWD/../../rust/target/release/browser"
 export BROWSER_DAEMON="$PWD/../../rust/target/release/browser daemon"
 # (stop the old daemon first so the new binary's daemon is the one serving:)
@@ -80,6 +80,6 @@ directly — no manual judging needed.
 
 ## Functional test (after deploying the new binary)
 ```bash
-cd scratch/webbench && export BROWSER_CLI=... BROWSER_DAEMON=...   # new binary
+cd benchmarks/webbench && export BROWSER_CLI=... BROWSER_DAEMON=...   # new binary
 ./run_one_pixel_smoke.sh   # or: setup pixel_click, screenshot, click --at each circle, check /__state.complete
 ```

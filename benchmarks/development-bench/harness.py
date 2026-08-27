@@ -12,7 +12,7 @@ DAEMON = os.environ.get("BROWSER_DAEMON", "").split() or [PY, "-m", "daemon.serv
 SOCK = Path.home() / ".browser-daemon" / "socket"; RES = HERE / "results"; RES.mkdir(exist_ok=True)
 LOG = HERE / "results" / "calls.log"; META = HERE / "results" / "current.json"
 ENV = {**os.environ, "PYTHONPATH": str(ROOT)}
-sys.path.insert(0, str(ROOT / "scratch/bench")); _argv = sys.argv; sys.argv = sys.argv[:1]; import run as bench; sys.argv = _argv
+sys.path.insert(0, str(ROOT / "benchmarks/bench")); _argv = sys.argv; sys.argv = sys.argv[:1]; import run as bench; sys.argv = _argv
 
 def state(): return json.load(urllib.request.urlopen(f"{BASE}/__state"))
 def proj(st, name): return next((p for p in st["projects"] if p["name"] == name), None)

@@ -12,8 +12,8 @@ the binary (`browser install skill` installs it into Claude Code / Codex / OpenC
 | `rust/src/js.rs` | all injected JavaScript: snapshot (iframe/shadow-DOM aware, `@eN` refs), target resolution (strict mode), settle. Snapshot and targeting share one role/name definition — keep it that way |
 | `cli/`, `daemon/` | the original Python implementation, kept as a reference and protocol oracle. Same JSON-over-Unix-socket protocol |
 | `tests/test_cli.py` | 20 end-to-end tests that drive a real daemon through the real CLI. They run against either implementation |
-| `scratch/bench/` | tool benchmark (latency, tokens, idle CPU/RSS) and one-off probes |
-| `scratch/agentbench/` | agent benchmark: 17 verifier-judged tasks run by fresh LLM subagents |
+| `benchmarks/bench/` | tool benchmark (latency, tokens, idle CPU/RSS) and one-off probes |
+| `benchmarks/development-bench/` | agent benchmark: 17 verifier-judged tasks run by fresh LLM subagents |
 | `AGENTBENCH.md` | all measured results; update it when numbers change |
 
 ## Build and test
@@ -32,7 +32,7 @@ release assets. Lint workflow changes with `actionlint` before pushing.
 
 ## Non-negotiables
 
-- **Measure before and after.** Any performance/resource claim goes through `scratch/bench/run.py`
+- **Measure before and after.** Any performance/resource claim goes through `benchmarks/bench/run.py`
   (before → change → after) or the agent benchmark; results belong in AGENTBENCH.md. macOS `ps pcpu`
   is a lifetime average — the harness uses `ps -o time` deltas for a reason.
 - **The protocol is shared.** The Rust and Python daemons speak the same JSON protocol; the test

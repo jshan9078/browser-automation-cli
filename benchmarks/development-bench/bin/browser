@@ -1,13 +1,13 @@
 #!/bin/bash
 # Shim: logs every CLI call (args, duration, stdout bytes) for the agent benchmark, then runs the real CLI.
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-LOG="${AGENTBENCH_LOG:-$ROOT/scratch/agentbench/results/calls.log}"
+LOG="${AGENTBENCH_LOG:-$ROOT/benchmarks/development-bench/results/calls.log}"
 start=$(python3 -c 'import time;print(time.time())')
-if [ -n "$BROWSER_CLI" ]; then out=$($BROWSER_CLI "$@" 2>/tmp/agentbench.err); rc=$?; else out=$(PYTHONPATH="$ROOT" "$ROOT/.venv/bin/python" -m cli.main "$@" 2>/tmp/agentbench.err); rc=$?; fi
+if [ -n "$BROWSER_CLI" ]; then out=$($BROWSER_CLI "$@" 2>/tmp/development-bench.err); rc=$?; else out=$(PYTHONPATH="$ROOT" "$ROOT/.venv/bin/python" -m cli.main "$@" 2>/tmp/development-bench.err); rc=$?; fi
 end=$(python3 -c 'import time;print(time.time())')
 python3 - "$LOG" "$start" "$end" "$rc" "${#out}" "$@" <<'PY'
 import json,sys
 log,start,end,rc,n,*args=sys.argv[1:]
 open(log,'a').write(json.dumps({"t":float(start),"dur":float(end)-float(start),"rc":int(rc),"out_chars":int(n),"args":args})+"\n")
 PY
-printf '%s\n' "$out"; cat /tmp/agentbench.err >&2; exit $rc
+printf '%s\n' "$out"; cat /tmp/development-bench.err >&2; exit $rc

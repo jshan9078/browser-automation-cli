@@ -5,7 +5,7 @@
 set -u
 cd "$(dirname "$0")/../.."
 MODEL=${1:-haiku}; LABEL=${2:-$MODEL}; ATTEMPTS=${3:-2}
-PY=.venv/bin/python; H=scratch/agentbench/harness.py; LOG=scratch/agentbench/results/suite-$LABEL.log
+PY=.venv/bin/python; H=benchmarks/development-bench/harness.py; LOG=benchmarks/development-bench/results/suite-$LABEL.log
 ANSWER_TASKS="t5_extract_count t6_extract_account t7_live_wikipedia h1_canvas_chart h4_audit_delayed h6_infinite_scroll h9_reauth_export"
 echo "=== suite $LABEL model=$MODEL attempts=$ATTEMPTS cli=${BROWSER_CLI:-python} $(date)" >> "$LOG"
 for a in $(seq 1 "$ATTEMPTS"); do
