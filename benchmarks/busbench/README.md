@@ -23,7 +23,7 @@ we compare to their committed results.
 | BrowserCode 0.0.3 | 86 (chart: 89.5 @ opus-4-8) |
 
 ## Prereqs (run in YOUR terminal)
-1. **Claude auth**: `CLAUDE_CODE_OAUTH_TOKEN` — auto-loaded from repo-root `.env` (or `CLAUDE_KEY`), same as webbench.
+1. **Claude auth**: `CLAUDE_CODE_OAUTH_TOKEN` — auto-loaded from repo-root `.env` (or `CLAUDE_KEY`).
 2. **Judge via your GCP credits (Vertex)** — VALIDATED working (2026-08-25) on `gemini-2.5-flash`:
    ```bash
    gcloud auth application-default login        # log in (YOU do this)
@@ -52,7 +52,7 @@ metrics), `raw/<id>.stream.txt` (transcript), `raw/shots/<id>/*.png` (screenshot
 per-task video `raw/video/<id>.mp4` — so judging never re-runs the model, and we never re-run the
 expensive opus pass just to get footage.
 
-**Video (on by default):** reuses webbench's `record_cdp.py` — a headless Chrome DevTools screencast
+**Video (on by default):** uses its bundled `record_cdp.py` — a headless Chrome DevTools screencast
 (no visible window) attached to the run's tab, assembled to mp4 via ffmpeg. It does NOT affect the score
 (the judge reads only screenshots) or the token/step/cost metrics; only adds a few MB/task + minor
 wall-clock. Set `RECORD=0` to skip. Needs `ffmpeg` + the `websockets` python package.

@@ -32,15 +32,6 @@ RELEASE.md
 benchmarks/development-bench/results/calls.log
 benchmarks/development-bench/results/current.json
 
-# webbench: publish per-task result JSONs (results/*.json, *.jsonl) + dashboard.
-# Keep videos / screenshots / full traces (raw/) and local run output out.
-# (*.log is already ignored globally above.)
-benchmarks/webbench/raw/
-benchmarks/webbench/archive/
-benchmarks/webbench/results/*.out
-benchmarks/webbench/results/*.html
-benchmarks/webbench/results/dashboard.html
-
 # busbench (BU Bench V1): browser-use's benchmark keeps its tasks + gold answers secret.
 # Publish the sanitized aggregate (RESULTS.md) + per-task sanitized score.json ONLY.
 # The full per-task record (full.json with answers/ground-truth, traces, streams, screenshots,

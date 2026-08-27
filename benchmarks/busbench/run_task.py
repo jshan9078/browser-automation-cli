@@ -5,7 +5,7 @@ needs (final answer, agent trajectory, screenshots) plus efficiency metrics. Wri
   python3 run_task.py <task_id> [effort]     # effort optional; OMIT to match BU's default (no --effort)
 
 Env: MODEL (default claude-opus-4-7 — matches BU Bench's Claude bars), CLAUDE_BIN, MAX_TURNS (100).
-Auth: loads CLAUDE_CODE_OAUTH_TOKEN from repo-root .env (or CLAUDE_KEY) like the webbench runners.
+Auth: loads CLAUDE_CODE_OAUTH_TOKEN from repo-root .env (or CLAUDE_KEY) from the repo-root .env.
 Run in your own terminal (a nested claude from inside another Claude session can't auth).
 """
 import base64, glob, json, os, shutil, signal, subprocess, sys, time
@@ -15,9 +15,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]                      # repo root
 RAW = HERE / os.environ.get("RAW_DIR", "raw"); RAW.mkdir(exist_ok=True)   # RAW_DIR override keeps a headed re-run separate from the headless baseline
 SHOTS = Path(f"/tmp/shots-{os.getpid()}")   # per-process so parallel tasks never clobber each other's screenshots
-# Headless per-run video via the webbench CDP screencast recorder (reused verbatim). On by default so
+# Headless per-run video via the bundled record_cdp.py CDP screencast recorder. On by default so
 # the one expensive opus pass is captured once; set RECORD=0 to skip. Needs ffmpeg + websockets.
-RECORDER = ROOT / "scratch" / "webbench" / "record_cdp.py"
+RECORDER = HERE / "record_cdp.py"
 RECORD = os.environ.get("RECORD", "1") != "0"
 # HEADED=1 runs a visible (non-headless) Chrome via `create --show`. Their Stealth Bench: local_headful
 # ~50% vs local_headless ~3.8% anti-bot pass — headed defeats most headless fingerprinting (no proxy
