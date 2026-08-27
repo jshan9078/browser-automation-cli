@@ -126,7 +126,7 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 | :-- | :-- |
 | `navigate <url> [--wait load\|domcontentloaded\|networkidle]` | Returns as soon as the page is usable; never fails on a slow `networkidle` |
 | `snapshot [scope] [--all] [--max N] [--json]` | Visible interactive elements + headings. `--all` adds text blocks, `--json` gives boxes and unique selectors |
-| `click <target> [--double]` | |
+| `click <target> [--double]` | Also `click --at X,Y` to click raw viewport pixels (canvas / vision — no DOM target; screenshot first, pixels map 1:1) |
 | `type <target> <text> [--sequential] [--submit]` | `fill()` by default; `--sequential` sends key events (autocomplete); `--submit` presses Enter |
 | `press <key> [target]` | `Enter`, `Tab`, `Control+a`, … |
 | `hover <target>` | |
@@ -140,14 +140,14 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 | `back` / `forward` | |
 | `batch` | JSON lines on stdin, run in one round-trip, stop at first failure |
 
-**Targets:** `@e12` (ref from snapshot — preferred) · CSS selector · `text=Create` · `role=button[name=Create]` · `label=Email` · `placeholder=Search` · or flags `--text / --role [--name] / --label / --placeholder`. Ambiguous CSS selectors are refused (strict mode) instead of clicking the first match.
+**Targets:** `@e12` (ref from snapshot — preferred) · CSS selector · `text=Create` · `role=button[name=Create]` · `label=Email` · `placeholder=Search` · or flags `--text / --role [--name] / --label / --placeholder`. Ambiguous CSS selectors are refused (strict mode) instead of clicking the first match. For canvas / vision cases with no DOM target, `click --at X,Y` clicks raw viewport pixels (take a `screenshot` first; its pixels map 1:1 to click coordinates).
 
 ***
 
 ## Architecture
 
 * **Daemon** (`browser-daemon`): Unix socket server (`~/.browser-daemon/socket`, mode 600) owning a headless Chromium, plus a headed one that exists only while some session is `show`n.
-* **CLI** (`browser`): ~40 ms per call, no Playwright import on the daemon path.
+* **CLI** (`browser`): a native Rust binary driving Chrome over raw CDP — ~2 ms per call, no Python/Node at runtime.
 * **Sessions**: one isolated browser context each. Hidden sessions are **frozen** after 10 s idle (script execution paused, ~3% CPU on animated dashboards; callbacks that fire while frozen are dropped, so `BROWSER_FREEZE_AFTER=0` disables it) and **hibernated** to `~/.browser-daemon/sessions/<id>.json` (cookies + storage + URL) after 10 min idle or on shutdown; they are rehydrated transparently on the next command. Tune with `BROWSER_FREEZE_AFTER` / `BROWSER_HIBERNATE_AFTER` (seconds).
 * **Resource profile** (M4, Cloudflare dashboard parked in a session): 2% CPU / 1.1 GB vs 264% CPU / 2.1 GB for v0.2. See [AGENTBENCH.md](AGENTBENCH.md) for the measurements.
 
@@ -182,13 +182,15 @@ Errors (exit code 1):
 
 Run `browser install skill` to install [`SKILL.md`](SKILL.md) into Claude Code / Codex / OpenCode, or share the file with any other harness.
 
-## Rust implementation (preview)
+## Rust implementation
 
-`rust/` contains a Rust client and daemon with the same CLI and socket protocol — no Python, Playwright or
-Node at all: `browser install` downloads the same Chrome-for-Testing build Playwright pins (into the same
-cache, so both implementations share it), and `capture` is native too. Per-call overhead 40 ms → 2 ms,
-daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See AGENTBENCH.md. Published to PyPI as
-0.4.0 under the same name (wheels for Linux x86_64/aarch64, macOS arm64/x86_64).
+`rust/` holds the Rust client and daemon — the **shipped implementation** since 0.4.0. Same CLI and
+socket protocol, no Python, Playwright, or Node at runtime: `browser install` downloads the same
+Chrome-for-Testing build Playwright pins (into the same cache), and `capture` is native too. Per-call
+overhead 40 ms → 2 ms, daemon RSS −90 MB, frame- and shadow-DOM-aware snapshots. See AGENTBENCH.md.
+Since 0.4.0 the PyPI package ships these Rust binaries under the same name (wheels for Linux
+x86_64/aarch64, macOS arm64/x86_64); the Python implementation stays in `cli/` and `daemon/` as a
+reference and protocol oracle.
 
 ```bash
 cd rust && cargo build --release
