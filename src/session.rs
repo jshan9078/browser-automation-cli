@@ -167,6 +167,23 @@ impl Manager {
                 Ok(_) => {}
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
                 Err(_) => break, } } }); }
+        // Native JS dialogs (alert/confirm/prompt/beforeunload) block the renderer and would wedge
+        // every later command, so auto-handle them: accept beforeunload (navigation/close always
+        // proceeds) and alert (OK is its only button); dismiss confirm/prompt (never silently
+        // confirm on the agent's behalf).
+        { let cdp2 = cdp.clone(); let mut rx = cdp.subscribe(); let sid2 = sid.clone();
+          tokio::spawn(async move {
+            loop { match rx.recv().await {
+                Ok(ev) if ev.session_id.as_deref() == Some(&sid2) && ev.method == "Page.javascriptDialogOpening" => {
+                    let typ = ev.params.get("type").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let msg = ev.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let accept = matches!(typ.as_str(), "beforeunload" | "alert");
+                    eprintln!("[daemon] auto-{} {typ} dialog: {:.80}", if accept { "accepting" } else { "dismissing" }, msg);
+                    let _ = cdp2.send(Some(&sid2), "Page.handleJavaScriptDialog", json!({"accept": accept})).await;
+                }
+                Ok(_) => {}
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                Err(_) => break, } } }); }
         page.send("Network.setUserAgentOverride", json!({"userAgent": ua})).await?;
         page.send("Emulation.setDeviceMetricsOverride", json!({"width": VIEWPORT.0, "height": VIEWPORT.1, "deviceScaleFactor": 1, "mobile": false})).await?;
         page.send("Page.addScriptToEvaluateOnNewDocument", json!({"source": js::STEALTH})).await?;
