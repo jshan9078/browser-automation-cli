@@ -57,16 +57,22 @@ impl Cdp {
     }
 
     pub async fn send(&self, session: Option<&str>, method: &str, params: Value) -> Result<Value, String> {
+        // Default per-command timeout, configurable via BROWSER_CDP_TIMEOUT_MS (60s).
+        let timeout_ms: u64 = std::env::var("BROWSER_CDP_TIMEOUT_MS").ok().and_then(|v| v.parse().ok()).filter(|&v| v > 0).unwrap_or(60_000);
+        self.send_timeout(session, method, params, timeout_ms).await
+    }
+
+    /// Like `send` but with an explicit timeout. Bookkeeping calls (url/title/readyState/save/freeze)
+    /// use SHORT timeouts so a wedged renderer costs seconds, not a 60s hang per call — the wedge bug
+    /// was never one lost response but N bookkeeping calls each eating the full default timeout in
+    /// series (and the housekeeper doing the same while holding the manager lock).
+    pub async fn send_timeout(&self, session: Option<&str>, method: &str, params: Value, timeout_ms: u64) -> Result<Value, String> {
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
         let (s, r) = oneshot::channel();
         self.pending.lock().unwrap().insert(id, s);
         let mut msg = json!({"id": id, "method": method, "params": params});
         if let Some(sid) = session { msg["sessionId"] = json!(sid); }
         self.tx.send(msg.to_string()).map_err(|_| "cdp send: connection closed".to_string())?;
-        // Per-command timeout. Configurable via BROWSER_CDP_TIMEOUT_MS so a wedged renderer fails fast
-        // (default 60s, unchanged). On timeout the pending entry is dropped and the caller gets an error
-        // it can act on (server.rs then attempts a reload-based recovery).
-        let timeout_ms: u64 = std::env::var("BROWSER_CDP_TIMEOUT_MS").ok().and_then(|v| v.parse().ok()).filter(|&v| v > 0).unwrap_or(60_000);
         match tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), r).await {
             Ok(Ok(v)) => v,
             Ok(Err(_)) => Err("cdp: response channel dropped".into()),

@@ -212,9 +212,12 @@ impl Manager {
             if l.context_id.is_empty() {
                 s.saved_url = l.page.url().await;  // profile mode: the on-disk profile is the state
             } else {
-                let cookies = l.page.cdp.send(None, "Storage.getCookies", json!({"browserContextId": l.context_id})).await.ok().and_then(|v| v["cookies"].as_array().cloned()).unwrap_or_default();
+                let cookies = l.page.cdp.send_timeout(None, "Storage.getCookies", json!({"browserContextId": l.context_id}), 10_000).await.ok().and_then(|v| v["cookies"].as_array().cloned()).unwrap_or_default();
                 let mut ls = s.saved_state.clone().unwrap_or_default().local_storage;
-                if let Ok(v) = l.page.call(js::LOCAL_STORAGE_DUMP, &[]).await { if v.is_object() { let o = v["origin"].clone(); ls.retain(|e| e["origin"] != o); ls.push(v); } }
+                // best-effort, short timeout: save() runs under the manager lock (housekeeper/detach);
+                // a wedged renderer must not hold the lock for the 60s default
+                let dump = l.page.send_t("Runtime.evaluate", json!({"expression": format!("{}\n;({})()", js::LIB, js::LOCAL_STORAGE_DUMP), "awaitPromise": true, "returnByValue": true}), actions::BOOKKEEP_TIMEOUT_MS).await;
+                if let Ok(r) = dump { let v = r.pointer("/result/value").cloned().unwrap_or(Value::Null); if v.is_object() { let o = v["origin"].clone(); ls.retain(|e| e["origin"] != o); ls.push(v); } }
                 s.saved_state = Some(SavedState { cookies, local_storage: ls });
                 s.saved_url = l.page.url().await;
             }
@@ -239,7 +242,9 @@ impl Manager {
     pub async fn set_frozen(&mut self, id: &str, frozen: bool) {
         let Some(s) = self.sessions.get_mut(id) else { return };
         if let Some(l) = &s.live {
-            if l.page.send("Emulation.setScriptExecutionDisabled", json!({"value": frozen})).await.is_ok() { s.frozen = frozen; }
+            // Short timeout: the housekeeper calls this every second while HOLDING the manager lock;
+            // a wedged renderer here used to hang the whole daemon (every command blocks on the lock).
+            if l.page.send_t("Emulation.setScriptExecutionDisabled", json!({"value": frozen}), actions::BOOKKEEP_TIMEOUT_MS).await.is_ok() { s.frozen = frozen; }
         }
     }
 
@@ -279,6 +284,62 @@ impl Manager {
         eprintln!("[daemon] created session {id} (profile={}, visible={visible})", profile.as_deref().unwrap_or("ephemeral"));
         if first_use { eprintln!("[daemon] first use of profile '{}': opened a window to sign in — later sessions reuse the login", profile.as_deref().unwrap_or("")); }
         Ok(id)
+    }
+
+    /// Hard-recover a wedged session: the renderer main thread is stuck, so nothing renderer-side
+    /// (evaluate, reload, even Runtime.terminateExecution in practice) comes back. Browser-side
+    /// target commands always work: read the target's current URL via Target.getTargets, close the
+    /// stuck target, and re-attach the session to a fresh renderer at that URL. Same session id;
+    /// page state is lost (it was unreachable anyway). Returns the fresh Page for retrying.
+    pub async fn hard_recover(&mut self, id: &str) -> Result<Page, String> {
+        let Some(s) = self.sessions.get_mut(id) else { return Err(format!("Session {id} not found")) };
+        let Some(l) = s.live.take() else { return Err("session not live".into()) };
+        let cdp = l.page.cdp.clone();
+        let saved = s.saved_url.clone();
+        let url = cdp.send_timeout(None, "Target.getTargets", json!({}), 5_000).await.ok()
+            .and_then(|v| v["targetInfos"].as_array().cloned())
+            .and_then(|ts| ts.iter().find(|t| t["targetId"].as_str() == Some(l.target_id.as_str())).cloned())
+            .and_then(|t| t["url"].as_str().map(String::from))
+            .filter(|u| !u.is_empty() && u != "about:blank")
+            .or_else(|| Some(saved).filter(|u| !u.is_empty() && u != "about:blank"));
+        eprintln!("[daemon] hard-recover {id}: closing wedged target (url={})", url.as_deref().unwrap_or("?"));
+        let _ = cdp.send_timeout(None, "Target.closeTarget", json!({"targetId": l.target_id}), 10_000).await;
+        if !l.context_id.is_empty() {
+            // keep the context (cookies/localStorage live in it); only the target was wedged
+            let s = self.sessions.get_mut(id).unwrap();
+            s.frozen = false;
+            // re-attach inside the SAME context so ephemeral session state survives
+            return self.attach_in_context(id, l.context_id.clone(), l.headless, url).await;
+        }
+        s.frozen = false;
+        self.attach(id, !l.headless, url).await?;
+        Ok(self.sessions[id].live.as_ref().unwrap().page.clone())
+    }
+
+    /// Re-create a target inside an existing browser context and wire the session to it (used by
+    /// hard_recover so an ephemeral session keeps its cookies/localStorage).
+    async fn attach_in_context(&mut self, id: &str, context_id: String, headless: bool, url: Option<String>) -> Result<Page, String> {
+        let profile = self.sessions.get(id).ok_or("no session")?.profile.clone();
+        let key = browser_key(profile.as_deref(), headless);
+        let b = self.browsers.get(&key).ok_or("browser gone")?;
+        let cdp = b.cdp.clone();
+        let mut create = json!({"url": "about:blank", "browserContextId": context_id});
+        if !headless { create["newWindow"] = json!(true); create["width"] = json!(VIEWPORT.0); create["height"] = json!(VIEWPORT.1); }
+        let t = cdp.send(None, "Target.createTarget", create).await?;
+        let target_id = t["targetId"].as_str().ok_or("no targetId")?.to_string();
+        let a = cdp.send(None, "Target.attachToTarget", json!({"targetId": target_id, "flatten": true})).await?;
+        let sid = a["sessionId"].as_str().ok_or("no sessionId")?.to_string();
+        let page = Page { cdp: cdp.clone(), sid: sid.clone(), inflight: std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0)) };
+        page.send("Page.enable", json!({})).await?;
+        page.send("Runtime.enable", json!({})).await?;
+        page.send("Network.enable", json!({})).await?;
+        page.send("Emulation.setDeviceMetricsOverride", json!({"width": VIEWPORT.0, "height": VIEWPORT.1, "deviceScaleFactor": 1, "mobile": false})).await?;
+        page.send("Page.addScriptToEvaluateOnNewDocument", json!({"source": js::STEALTH})).await?;
+        let _ = page.send("Emulation.setFocusEmulationEnabled", json!({"enabled": true})).await;
+        let s = self.sessions.get_mut(id).unwrap();
+        s.live = Some(Live { page: page.clone(), context_id, target_id, headless });
+        if let Some(u) = url { let _ = page.send("Page.navigate", json!({"url": u})).await; let _ = page.wait_ready("interactive", 15_000).await; }
+        Ok(page)
     }
 
     /// Ready a session for a command: rehydrate if hibernated, thaw if frozen.

@@ -79,11 +79,20 @@ pub async fn process(shared: &Shared, request: &Value, shutdown: &tokio::sync::w
                     // the manager lock is NOT held while the action runs, so other sessions proceed in parallel
                     let mut result = dispatch(&page, &sid, action, &params, shared).await;
                     // Wedge recovery: a CDP timeout means the renderer main thread is stuck (commands hang
-                    // and never recover on their own). Page.reload replaces the renderer with a fresh one;
-                    // then retry the command ONCE. Skipped for navigate (it already loads a fresh document).
+                    // and never recover on their own). First try soft recovery (terminate script + reload,
+                    // preserves the page when it works). A truly blocked renderer services NEITHER — then
+                    // hard-recover: close the wedged target browser-side and re-attach the session to a
+                    // fresh renderer at the same URL. Retry the command ONCE on whichever recovery worked.
+                    // Skipped for navigate (it already loads a fresh document).
                     if is_cdp_timeout(&result) && action != "navigate" {
-                        if page.recover().await.is_ok() {
-                            result = dispatch(&page, &sid, action, &params, shared).await;
+                        let fresh = if page.recover().await.is_ok() { Some(page.clone()) } else {
+                            match shared.lock().await.hard_recover(&sid).await {
+                                Ok(p) => Some(p),
+                                Err(e) => { eprintln!("[daemon] hard-recover {sid} failed: {e}"); None }
+                            }
+                        };
+                        if let Some(pg) = fresh {
+                            result = dispatch(&pg, &sid, action, &params, shared).await;
                             if let Some(o) = result.as_object_mut() { o.insert("recovered".into(), json!(true)); }
                         }
                     }

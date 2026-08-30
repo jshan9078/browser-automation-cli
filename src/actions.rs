@@ -16,8 +16,28 @@ pub struct Page {
     pub inflight: std::sync::Arc<std::sync::atomic::AtomicI64>,
 }
 
+/// Timeout for input dispatch (key/mouse). Chrome acks input from the renderer; a blocked main
+/// thread hangs the ack, so fail fast — this is what turns a wedge into an is_cdp_timeout error
+/// that server.rs can recover with a reload instead of a minutes-long poisoned session.
+pub const INPUT_TIMEOUT_MS: u64 = 10_000;
+/// Timeout for best-effort bookkeeping reads (url/title/readyState/save probes). These run after
+/// nearly every action and during housekeeping (under the manager lock); they must never multiply
+/// a renderer wedge into minutes of serial hangs.
+pub const BOOKKEEP_TIMEOUT_MS: u64 = 3_000;
+
 impl Page {
     pub async fn send(&self, method: &str, params: Value) -> Result<Value, String> { self.cdp.send(Some(&self.sid), method, params).await }
+    pub async fn send_t(&self, method: &str, params: Value, timeout_ms: u64) -> Result<Value, String> { self.cdp.send_timeout(Some(&self.sid), method, params, timeout_ms).await }
+
+    /// Short-timeout eval for bookkeeping reads; a wedged renderer costs 3s, not 60s.
+    pub async fn eval_t(&self, expression: &str, timeout_ms: u64) -> Result<Value, String> {
+        let r = self.send_t("Runtime.evaluate", json!({"expression": expression, "awaitPromise": true, "returnByValue": true}), timeout_ms).await?;
+        if let Some(ex) = r.get("exceptionDetails") {
+            let msg = ex.pointer("/exception/description").or(ex.get("text")).and_then(|v| v.as_str()).unwrap_or("evaluation failed");
+            return Err(msg.lines().next().unwrap_or(msg).to_string());
+        }
+        Ok(r.pointer("/result/value").cloned().unwrap_or(Value::Null))
+    }
 
     /// Evaluate a function expression with JSON args in the page's main world; returns the JSON value.
     pub async fn call(&self, fn_src: &str, args: &[Value]) -> Result<Value, String> {
@@ -40,8 +60,8 @@ impl Page {
         Ok(r.pointer("/result/value").cloned().unwrap_or(Value::Null))
     }
 
-    pub async fn url(&self) -> String { self.eval("location.href").await.ok().and_then(|v| v.as_str().map(String::from)).unwrap_or_default() }
-    pub async fn title(&self) -> String { self.eval("document.title").await.ok().and_then(|v| v.as_str().map(String::from)).unwrap_or_default() }
+    pub async fn url(&self) -> String { self.eval_t("location.href", BOOKKEEP_TIMEOUT_MS).await.ok().and_then(|v| v.as_str().map(String::from)).unwrap_or_default() }
+    pub async fn title(&self) -> String { self.eval_t("document.title", BOOKKEEP_TIMEOUT_MS).await.ok().and_then(|v| v.as_str().map(String::from)).unwrap_or_default() }
 
     /// Wait until the DOM has been quiet for 60 ms (max 500 ms).
     pub async fn settle(&self) {
@@ -53,7 +73,9 @@ impl Page {
     pub async fn wait_ready(&self, state: &str, timeout_ms: u64) -> Result<(), String> {
         let start = Instant::now();
         loop {
-            let rs = self.eval("document.readyState").await.unwrap_or(Value::Null);
+            // short per-poll timeout: on a wedged renderer one hung eval must not eat the 60s
+            // default and blow far past this loop's own budget
+            let rs = self.eval_t("document.readyState", BOOKKEEP_TIMEOUT_MS).await.unwrap_or(Value::Null);
             let rs = rs.as_str().unwrap_or("");
             if rs == "complete" || (state == "interactive" && rs == "interactive") { return Ok(()); }
             if start.elapsed() > Duration::from_millis(timeout_ms) { return Err(format!("Timeout {timeout_ms}ms exceeded waiting for {state}")); }
@@ -67,9 +89,17 @@ impl Page {
     /// un-wedges the session. Bounded so recovery itself can't hang. Loses page state (the session was
     /// already unusable), but restores a working session for the caller to retry.
     pub async fn recover(&self) -> Result<(), String> {
-        self.send("Page.reload", json!({"ignoreCache": false})).await?;
-        let _ = self.wait_ready("interactive", 15000).await;
-        Ok(())
+        // A wedged renderer is almost always JS stuck on the main thread (busy loop, pathological
+        // handler). Runtime.terminateExecution is delivered out-of-band exactly for this: it aborts
+        // the running script without touching page state. Page.reload alone can NOT recover a truly
+        // blocked renderer — the reload command is serviced by the same blocked thread.
+        let _ = self.send_t("Runtime.terminateExecution", json!({}), 5_000).await;
+        if self.eval_t("1", 2_000).await.is_ok() { eprintln!("[daemon] soft-recover: script terminated, page preserved"); return Ok(()); }
+        // Still stuck: bounded reload attempt (only helps if the block just cleared).
+        self.send_t("Page.reload", json!({"ignoreCache": false}), 5_000).await?;
+        let _ = self.wait_ready("interactive", 5_000).await;
+        if self.eval_t("1", 2_000).await.is_ok() { eprintln!("[daemon] soft-recover: reloaded"); Ok(()) }
+        else { Err("renderer still wedged after terminate+reload".into()) }
     }
 
     async fn after(&self, mut result: Map<String, Value>, snap: bool, settle: bool) -> Value {
@@ -107,7 +137,7 @@ impl Page {
     }
 
     async fn mouse(&self, kind: &str, x: f64, y: f64, button: &str, clicks: u32, modifiers: u32) -> Result<(), String> {
-        self.send("Input.dispatchMouseEvent", json!({"type": kind, "x": x, "y": y, "button": button, "clickCount": clicks, "modifiers": modifiers})).await.map(|_| ())
+        self.send_t("Input.dispatchMouseEvent", json!({"type": kind, "x": x, "y": y, "button": button, "clickCount": clicks, "modifiers": modifiers}), INPUT_TIMEOUT_MS).await.map(|_| ())
     }
 
     async fn click_at(&self, x: f64, y: f64, clicks: u32) -> Result<(), String> {
@@ -289,8 +319,8 @@ pub async fn press_key_combo(page: &Page, combo: &str) -> Result<(), String> {
         let cmd = match key.to_ascii_lowercase().as_str() { "a" => Some("selectAll"), "c" => Some("copy"), "v" => Some("paste"), "x" => Some("cut"), "z" => Some("undo"), _ => None };
         if let Some(c) = cmd { down["commands"] = json!([c]); }
     }
-    page.send("Input.dispatchKeyEvent", down).await?;
-    page.send("Input.dispatchKeyEvent", json!({"type": "keyUp", "key": key, "code": code, "windowsVirtualKeyCode": vk, "nativeVirtualKeyCode": vk, "modifiers": modifiers})).await?;
+    page.send_t("Input.dispatchKeyEvent", down, INPUT_TIMEOUT_MS).await?;
+    page.send_t("Input.dispatchKeyEvent", json!({"type": "keyUp", "key": key, "code": code, "windowsVirtualKeyCode": vk, "nativeVirtualKeyCode": vk, "modifiers": modifiers}), INPUT_TIMEOUT_MS).await?;
     Ok(())
 }
 
