@@ -38,6 +38,29 @@ If commands are not found after install, add `~/.local/bin` to your PATH:
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
+### Which browser engine to use
+
+**The managed engine (Chrome for Testing, the default once `browser install` has run) is the
+recommended setup.** The alternative, `browser engine system`, launches your own installed
+Chrome/Edge/Brave headless, and on macOS that collides with the app's identity: while the daemon
+is running, LaunchServices thinks "Google Chrome is already running" and clicking the Chrome dock
+icon fronts the invisible headless instance instead of opening a window. The managed build has its
+own app identity, so your personal browser is never affected, its version is pinned instead of
+auto-updating underneath long-running work, and headed login windows are visually distinct from
+your own browsing.
+
+```bash
+browser install          # downloads the managed build; `engine auto` (default) then prefers it
+browser engine managed   # or pin it explicitly
+browser shutdown         # restart the daemon to apply an engine change
+```
+
+One caveat: Chrome for Testing identifies itself slightly differently than consumer Chrome, and
+some aggressive bot-detection stacks treat it with more suspicion. If a site that worked before
+starts throwing bot walls, try `browser engine system` (plus `browser shutdown` to restart) and
+see if it clears: sessions, profiles, and logins are stored by the daemon, not the browser binary,
+so they survive engine switches.
+
 ## Quick Start
 
 ### 1. Create a session (the daemon auto-starts)
@@ -100,8 +123,10 @@ browser shutdown              # stop the daemon; sessions are saved and restored
 browser capture <url> [-f] [-o <path>]     # headless viewport screenshot (-f = full page)
 browser install [--all]                    # download headless Chromium (Chrome for Testing, ~196 MB);
                                            # the headed build (~356 MB) downloads on first `show`, or now with --all
-browser engine [auto|managed|system|<path>]  # use your installed Chrome/Edge/Brave instead (zero download);
-                                           # auto = managed build if downloaded, else the system browser
+browser engine [auto|managed|system|<path>]  # managed (recommended) = pinned Chrome for Testing;
+                                           # system = your installed Chrome/Edge/Brave (zero download,
+                                           # but hijacks the app identity of your own browser while the
+                                           # daemon runs); auto = managed if downloaded, else system
 browser profile [status]                   # by DEFAULT sessions use a persistent "default" profile:
                                            # the first session opens a window to sign in, every later
                                            # session reuses that login. Manage it with:
