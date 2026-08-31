@@ -33,7 +33,7 @@ uv build                     # dist/browser_automation_cli-<ver>-py3-none-any.wh
 ```
 
 ## 4. Publish
-Tokens: PyPI (and optionally TestPyPI) API tokens, scope "project: browser-automation-cli". Keep them in your shell env or a password manager — never in the repo.
+Tokens: PyPI (and optionally TestPyPI) API tokens, scope "project: browser-automation-cli". Keep them in your shell env or a password manager: never in the repo.
 ```bash
 # optional dry run against TestPyPI
 UV_PUBLISH_TOKEN=pypi-... uv publish --publish-url https://test.pypi.org/legacy/
@@ -57,7 +57,7 @@ git tag v<ver> && git push origin main --tags
 Then confirm https://pypi.org/project/browser-automation-cli/ shows the new version.
 
 ## Troubleshooting
-- **"File already exists"** on publish: the version was already uploaded — bump `pyproject.toml`, `uv lock`, rebuild.
+- **"File already exists"** on publish: the version was already uploaded: bump `pyproject.toml`, `uv lock`, rebuild.
 - **Source edits don't show up after `uv tool install .`**: uv reused a cached wheel for the same version. Use `--reinstall --no-cache`, or bump the version.
 - **`browser` runs an old version**: a leftover pipx install shadows the uv one. `pipx uninstall browser-automation-cli` then `uv tool install --force .` (`ls -la ~/.local/bin/browser` should point into `~/.local/share/uv/tools/`).
-- **Playwright prompts to run `playwright install`**: the Chromium build for the locked Playwright version is missing — `browser install`.
+- **Playwright prompts to run `playwright install`**: the Chromium build for the locked Playwright version is missing: `browser install`.
