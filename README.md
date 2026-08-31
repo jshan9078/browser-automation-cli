@@ -184,6 +184,7 @@ All print JSON (snapshot prints text). Add `-s` / `--snapshot` to any action to 
 * **Daemon** (`browser-daemon`): Unix socket server (`~/.browser-daemon/socket`, mode 600) owning a headless Chromium, plus a headed one that exists only while some session is `show`n.
 * **CLI** (`browser`): a native Rust binary driving Chrome over raw CDP, ~2 ms per call, no Python/Node at runtime.
 * **Sessions**: one isolated browser context each. Hidden sessions are **frozen** after 10 s idle (script execution paused, ~3% CPU on animated dashboards; callbacks that fire while frozen are dropped, so `BROWSER_FREEZE_AFTER=0` disables it) and **hibernated** to `~/.browser-daemon/sessions/<id>.json` (cookies + storage + URL) after 10 min idle or on shutdown; they are rehydrated transparently on the next command. Tune with `BROWSER_FREEZE_AFTER` / `BROWSER_HIBERNATE_AFTER` (seconds).
+* **Wedge recovery** (0.8.4+): every CDP call is individually bounded (10 s for input dispatch, 3 s for post-action bookkeeping), so a page whose renderer locks up, canvas apps with heavy key handlers are the usual culprits, surfaces as a fast error instead of a minutes-long hang. The daemon then recovers automatically: first in-place (halt scripts + bounded reload), then by replacing the wedged tab with a fresh one in the same browser context (same cookies/storage, URL restored). A command completed via recovery reports `"recovered": true`.
 * **Resource profile** (M4, Cloudflare dashboard parked in a session): 2% CPU / 1.1 GB vs 264% CPU / 2.1 GB for v0.2. See [`benchmarks/`](benchmarks/) for methodology and measurements.
 
 ## Anti-Detection
@@ -252,6 +253,8 @@ python3 benchmarks/performance-test/compare.py baseline <label>
 | `ref @eN is unknown or stale` | Page changed; run `snapshot` again |
 | `strict mode violation` | Selector matched several elements; use an `@ref`, `--text`, or a tighter selector |
 | Stale Chromium processes | `browser cleanup` |
+| A click/keypress errors with a CDP timeout, or a result says `"recovered": true` | The page's renderer wedged; the daemon already recovered it (0.8.4+). Re-run `snapshot` and continue; if the same page keeps wedging, `browser <id> delete` and start fresh |
+| Clicking your Chrome dock icon does nothing while the daemon runs (macOS) | You are on `browser engine system`, which launches your own Chrome headless and confuses LaunchServices. Switch to the managed engine (see "Which browser engine to use"); `open -n -a "Google Chrome"` works meanwhile |
 
 ### Installing the binaries
 

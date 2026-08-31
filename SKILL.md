@@ -31,7 +31,8 @@ browser capture http://localhost:3000
 
 ```bash
 uv tool install browser-automation-cli && browser install    # one-time; downloads headless Chromium (~196 MB)
-# or skip the download and use the installed Chrome/Edge/Brave:  browser engine system
+# the downloaded managed engine is recommended; `browser engine system` uses the installed
+# Chrome/Edge/Brave instead (no download, but on macOS it hijacks the user's Chrome app identity)
 export PATH="$HOME/.local/bin:$PATH"                         # if commands are not found
 # the daemon auto-starts on the first command (run `browser daemon &` yourself to manage it; BROWSER_NO_AUTOSTART=1 disables)
 browser create                                               # prints session id
