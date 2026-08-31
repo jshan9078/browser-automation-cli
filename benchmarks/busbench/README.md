@@ -112,10 +112,10 @@ Reporting mitigation instead:
 
 ## Caveats to disclose in any writeup
 - Their Claude Code version at run time (~2026-04) is unknown (passthrough); record your `claude --version`.
-- Single-run judge variance is real (their sonnet runs swung 61–69), do ≥2 runs.
+- Single-run judge variance is real (their sonnet runs swung 61-69), do ≥2 runs.
 - Their browser tool is a *remote* cloud browser; browser-cli is *local* (affects latency/resource metrics).
 - **We omit their `--max-budget-usd 10` cap** (running on a CC subscription). That cap could early-terminate a task as a FAIL on their side; ours runs to `--max-turns 100`. Slightly favors us, disclose.
 - **`--bare` divergence:** they ran `--bare` (no skill); our token auth needs it off, so the `/browser-cli` skill loads. Different system context. The hardened `system_prompt.md` forbids daemon/session management to compensate.
-- **Screenshots are agent-driven**, not auto-captured per step like an agent-browser harness, the judge sees only shots the agent chose to take (pilot: 2–8/task). Fewer images = less visual evidence for the judge.
+- **Screenshots are agent-driven**, not auto-captured per step like an agent-browser harness, the judge sees only shots the agent chose to take (pilot: 2-8/task). Fewer images = less visual evidence for the judge.
 - `agent_steps` are per-step truncated (assistant 500 / tool-input 200 / result 300 chars) to build the trajectory the judge reads, a compressed view vs BU's native format.
 - Lead with Pareto: their Claude Code harness spent ~$97 / 6,245 steps for 74%, efficiency is browser-cli's likely edge.
