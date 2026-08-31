@@ -103,7 +103,7 @@ h1 "Sign in to GitHub"
 @e8 link "Create an account" href="/signup?source=login"
 ```
 
-One line per visible interactive element (plus h1–h3 and live regions), **including elements inside same-origin iframes (marked `[frame]`) and open shadow DOM**: target them like any other element. `@eN` refs are stable until navigation; `[below]`/`[above]` mark elements outside the viewport (clicking scrolls automatically). Hidden elements are omitted. Use a scope selector or `--max` on very long pages; `--json` adds bounding boxes and unique selectors.
+One line per visible interactive element (plus h1-h3 and live regions), **including elements inside same-origin iframes (marked `[frame]`) and open shadow DOM**: target them like any other element. `@eN` refs are stable until navigation; `[below]`/`[above]` mark elements outside the viewport (clicking scrolls automatically). Hidden elements are omitted. Use a scope selector or `--max` on very long pages; `--json` adds bounding boxes and unique selectors.
 
 ## Agent Workflow
 
