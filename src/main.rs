@@ -183,7 +183,12 @@ fn build(sid: &str, action: &str, rest: &[String]) -> Option<Value> {
             req("click", p)
         }
         "type" | "fill" => {
-            let (s, t) = if has_target_flags(&tp) { (String::new(), sel(0)) } else if pos.len() >= 2 { (pos[0].clone(), pos[1].clone()) } else { return None };
+            // Text is everything after the target, joined with spaces, so `type @e4 My project` types
+            // "My project" (as SKILL.md documents) instead of silently dropping every word but the first.
+            let (s, t) = if has_target_flags(&tp) {
+                if pos.is_empty() { return None }
+                (String::new(), pos.join(" "))
+            } else if pos.len() >= 2 { (pos[0].clone(), pos[1..].join(" ")) } else { return None };
             p.insert("selector".into(), json!(s));
             p.insert("text_value".into(), json!(t));
             if f.contains_key("sequential") { p.insert("sequential".into(), json!(true)); }
@@ -618,4 +623,21 @@ fn main() {
     };
     update_notice();
     exit(code);
+}
+
+#[cfg(test)]
+mod cli_arg_tests {
+    use super::*;
+    fn text_of(words: &[&str]) -> String {
+        let w: Vec<String> = words.iter().map(|x| x.to_string()).collect();
+        let r = build("sid", &w[0], &w[1..]).expect("request");
+        r["params"]["text_value"].as_str().unwrap_or("").to_string()
+    }
+    #[test]
+    fn type_text_joins_unquoted_words() {
+        assert_eq!(text_of(&["type", "@e1", "Priya", "Raman"]), "Priya Raman");
+        assert_eq!(text_of(&["fill", "@e1", "one"]), "one");
+        assert_eq!(text_of(&shell_words("type @e4 My project").iter().map(String::as_str).collect::<Vec<_>>()), "My project");
+        assert_eq!(text_of(&shell_words("type @e4 \"quoted still works\"").iter().map(String::as_str).collect::<Vec<_>>()), "quoted still works");
+    }
 }
